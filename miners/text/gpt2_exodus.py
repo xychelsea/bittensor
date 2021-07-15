@@ -30,6 +30,7 @@ import traceback
 import os
 import sys
 import yaml
+import wandb
 
 from termcolor import colored
 from typing import List
@@ -49,6 +50,7 @@ class neuron:
     def __init__( self, config: 'bittensor.config' = None ):
         r""" Initializes a neuron with the passed config.
         """
+        wandb.login()
         if config == None: config = neuron.config()
         self.config = config; neuron.check_config( self.config ); print ( self.config )
         bittensor.logging (
@@ -181,39 +183,46 @@ class neuron:
     def run( self ):
         r""" Miner main loop.
         """
-        # ---- Startup/Shutdown ----
-        with self:
-
-            # ---- Optionally reload from previous run ----
-            if self.config.neuron.reload:
-                self.reload()
-            else:
-                self.checkpoint()
-
-            # --- Run until n_epochs ----
-            while self.epoch < self.config.neuron.n_epochs:
-                try:
-                    # ---- Train state ----
-                    self.run_epoch()
-
-                    # ---- Set weights on chain ----
-                    self.set_mechanism_weights()
-
-                    # ---- Checkpoint state ----
+        with wandb.init(
+            project='GPT-miner',
+            dir = self.config.neuron.full_path,
+            config = self.config
+        ):
+            # ---- Startup/Shutdown ----
+            with self:
+                
+                # ---- Optionally reload from previous run ----
+                if self.config.neuron.reload:
+                    self.reload()
+                else:
                     self.checkpoint()
+                    
+                wandb.watch(self.nucleus.blocks,self.nucleus.loss_fct,log ='all',log_freq=10,idx=0)
+                # --- Run until n_epochs ----
+                while self.epoch < self.config.neuron.n_epochs:
+                    try:
+                        wandb.log({'Epoch':self.epoch})
+                        # ---- Train state ----
+                        self.run_epoch()
 
-                except KeyboardInterrupt:
-                    # --- User ended session ----
-                    break
+                        # ---- Set weights on chain ----
+                        self.set_mechanism_weights()
 
-                except Exception as e:
-                    # --- Unknown error ----
-                    logger.exception('Unknown exception: {} with traceback {}', e, traceback.format_exc())
-                    if self.config.neuron.restart_on_failure == True:
-                        logger.info('Restarting from last saved state.')
-                        self.reload()
-                    else:
+                        # ---- Checkpoint state ----
+                        self.checkpoint()
+
+                    except KeyboardInterrupt:
+                        # --- User ended session ----
                         break
+
+                    except Exception as e:
+                        # --- Unknown error ----
+                        logger.exception('Unknown exception: {} with traceback {}', e, traceback.format_exc())
+                        if self.config.neuron.restart_on_failure == True:
+                            logger.info('Restarting from last saved state.')
+                            self.reload()
+                        else:
+                            break
 
     # --- Run Epoch ----
     def run_epoch( self ):
@@ -565,6 +574,7 @@ class neuron:
         stake = self.metagraph.S[ self_uid ].item()
         rank = self.metagraph.R[ self_uid ].item()
         incentive = self.metagraph.I[ self_uid ].item()
+        N_uids = 0
         info = {
             'GS': colored('{}'.format(self.global_step), 'red'),
             'LS': colored('{}'.format(iteration), 'blue'),
@@ -581,7 +591,13 @@ class neuron:
         }
         for uid in self.metagraph.uids.tolist():
             if next_mechanism_weights[uid] != 0:
+                N_uids += 1
                 weight_dif = next_mechanism_weights[uid] - prev_mechanism_weights[uid]
+                wandb.log({
+                    'Mechanism_weights_' + str(uid):next_mechanism_weights[uid]
+                }
+                )
+
                 if weight_dif > 0:
                     info[colored(str(uid), 'green')] = colored('{:.4f}'.format(next_mechanism_weights[uid]), 'green')
                 elif weight_dif == 0:
@@ -590,7 +606,16 @@ class neuron:
                     info[colored(str(uid), 'red')] = colored('{:.4f}'.format(next_mechanism_weights[uid]), 'red')
 
         progress_bar.set_infos( info )
-
+        wandb.log({
+            'Number of connected peers':N_uids,
+            'remote_target_loss':output.remote_target_loss.item(),
+            'distillation_loss':output.distillation_loss.item(), 
+            "local_target_loss": output.local_target_loss.item(),
+            'Number of Peers':self.metagraph.n.item(),
+            'Stake':stake,
+            'Rank':rank,
+            'Incentive':incentive}
+        )
         if self.config.neuron.use_tensorboard:
             self.tensorboard.add_scalar('R-loss', output.remote_target_loss.item(), self.global_step)
             self.tensorboard.add_scalar('L-loss', output.local_target_loss.item(), self.global_step)
