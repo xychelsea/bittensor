@@ -315,7 +315,7 @@ class Miner:
             
             # ---- reloads previous run ----
             try:
-                #self.save()
+                self.save()
                 self.reload()
             except:
                 self.save()
