@@ -200,7 +200,7 @@ class Nucleus(nn.Module):
         )
         # ---- Join based on weights ----
         joining_uids= torch.where(return_ops==0)[0]
-        joining_weights = F.normalize(topk_weights[(return_ops == 0)])
+        joining_weights = F.normalize(topk_weights[(return_ops == 0)],dim=0)
         output = torch.zeros( (inputs.shape[0], inputs.shape[1], bittensor.__network_dim__)).to( self.config.miner.device )
         for index, joining_weight in enumerate( joining_weights ): 
             output += responses[joining_uids[index]].to( self.config.miner.device ) * joining_weight
