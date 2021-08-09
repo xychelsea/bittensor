@@ -200,18 +200,14 @@ class Nucleus(nn.Module):
         )
 
         # ---- Join based on weights ----
-        #print(topk_weights[(return_ops == 0)])
-        joining_uids= [i for i, x in enumerate(return_ops == 0) if x]
+        joining_uids= torch.where(return_ops==0)
         joining_weights = F.softmax( topk_weights[(return_ops == 0)], dim = 0 )
-        #print(joining_uids,joining_weights)
         output = torch.zeros( (inputs.shape[0], inputs.shape[1], bittensor.__network_dim__)).to( self.config.miner.device )
         for index, joining_weight in enumerate( joining_weights ): 
-            #print(index,joining_uids[index],joining_weights[index],responses[joining_uids[index]].sum(),self.chain_weights[index])
             output += responses[joining_uids[index]].to( self.config.miner.device ) * joining_weight
 
         # ---- Punish peers with non-successful return ops ----
         with torch.no_grad():
-            #print(self.chain_weights,topk_uids[(return_ops != 0)])
             self.chain_weights[topk_uids[(return_ops != 0)]] -=  self.config.nucleus.punishment
 
         # ---- Return response -----
@@ -638,7 +634,7 @@ class Miner:
                 'Axon QPS':bittensor.neuron.axon.stats.qps.value}
 
         #removing normalization of chain weights for display
-        normalized_chain_weights = F.softmax(self.nucleus.chain_weights)
+        normalized_chain_weights = self.nucleus.chain_weights
         for uid in bittensor.neuron.metagraph.uids.tolist():
             if self.nucleus.chain_weights[uid] != 0:
                 weight_dif = -self.nucleus.chain_weights.grad[uid]
