@@ -200,7 +200,7 @@ class Nucleus(nn.Module):
         )
         import pdb;pdb.set_trace()
         # ---- Join based on weights ----
-        joining_uids= torch.where(return_ops==0)
+        joining_uids= torch.where(return_ops==0)[0]
         joining_weights = F.softmax( topk_weights[(return_ops == 0)], dim = 0 )
         print(joining_weights, joining_uids)
         output = torch.zeros( (inputs.shape[0], inputs.shape[1], bittensor.__network_dim__)).to( self.config.miner.device )
