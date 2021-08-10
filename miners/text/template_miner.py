@@ -18,7 +18,7 @@
 """ The Exodus miner.
 
 Example:
-    $ python miners/text/gpt2_exodus.py
+    $ python miners/text/template_miner.py
 
 """
 
@@ -57,12 +57,12 @@ class Nucleus(nn.Module):
         local_hidden_layers = TransformerEncoderLayer( bittensor.__network_dim__, self.config.nucleus.nhead, self.config.nucleus.nhid, self.config.nucleus.dropout )
         self.local_encoder = TransformerEncoder( local_layers, self.config.nucleus.nlayers )
         self.local_hidden = TransformerEncoder( local_hidden_layers, self.config.nucleus.nlayers )
-        self.local_decoder = nn.Linear( bittensor.__network_dim__, bittensor.__vocab_size__ )
+        self.local_decoder = nn.Linear( bittensor.__network_dim__, bittensor.__vocab_size__ , bias=False)
 
         # Remote Model
         remote_context_layers = TransformerEncoderLayer( bittensor.__network_dim__, self.config.nucleus.nhead, self.config.nucleus.nhid, self.config.nucleus.dropout )
         self.remote_hidden = TransformerEncoder( remote_context_layers, self.config.nucleus.nlayers )
-        self.remote_decoder = nn.Linear( bittensor.__network_dim__, bittensor.__vocab_size__ )
+        self.remote_decoder = nn.Linear( bittensor.__network_dim__, bittensor.__vocab_size__ , bias=False)
 
         self.loss_fct = nn.CrossEntropyLoss()
         self.chain_weights = nn.Parameter(torch.ones( [0] , requires_grad=True))
@@ -82,9 +82,7 @@ class Nucleus(nn.Module):
     def init_weights(self):
         initrange = 0.1
         self.remote_decoder.weight.data.uniform_(-initrange, initrange)
-        self.remote_decoder.bias.data.zero_()
         self.local_decoder.weight.data.uniform_(-initrange, initrange)
-        self.local_decoder.bias.data.zero_()
 
     def local_forward(self, inputs: torch.int64, training : bool = True) -> SimpleNamespace:
         """ Forward pass through GPT2 nucleus.
@@ -109,12 +107,12 @@ class Nucleus(nn.Module):
 
         # local_context: hidden layer encoding of sequence with local_context.
         # local_context.shape = [batch_size, sequence_len, bittensor.__network_dim__]
-        output.local_context = self.local_encoder( self.embedding( inputs ) )
+        output.local_context = self.local_encoder( self.embedding( inputs ) )* math.sqrt(bittensor.__network_dim__)
 
         if training :
             # local_hidden: local model which learns a new projection from the local_context
             # local_hidden.shape = [batch_size, sequence_len, bittensor.__vocab_size__]
-            output.local_hidden = self.local_hidden( output.local_context.detach() )
+            output.local_hidden = self.local_hidden( output.local_context.detach())
 
             # local_target: projection of local_hidden onto target dimension.
             # local_target.shape = [batch_size, sequence_len, bittensor.__vocab_size__]
@@ -239,16 +237,22 @@ class Miner:
         self.optimizer = torch.optim.SGD(
             [ {"params": self.nucleus.parameters()}],
             lr = self.config.miner.learning_rate,
-            momentum=0.8
+            momentum = self.config.miner.momentum,
+        )
+
+        #Torch scheduler
+        self.scheduler= torch.optim.lr_scheduler.StepLR(self.optimizer,
+            step_size= 100.0,
+            gamma=0.9
         )
 
         #bittensor backend
-        self.neuron = bittensor.init (  
-                config = self.config,
-                root_dir = self.config.miner.full_path,
-                axon_forward_callback = self.forward,
-                axon_backward_callback = self.backward,
-            ) 
+        self.neuron = bittensor.init (
+            config = self.config,
+            root_dir = self.config.miner.full_path,
+            axon_forward_callback = self.forward,
+            axon_backward_callback = self.backward,
+        ) 
 
     @staticmethod
     def config() -> 'bittensor.Config':
@@ -257,8 +261,9 @@ class Miner:
         # ---- Add miner args.
         parser = argparse.ArgumentParser()
         parser.add_argument('--miner.config', type=str, help='If set, defaults are overridden by passed file.')
-        parser.add_argument('--miner.learning_rate', type=float, help='Training initial learning rate.', default=3e-2)
+        parser.add_argument('--miner.learning_rate', type=float, help='Training initial learning rate.', default=1)
         parser.add_argument('--miner.weight_decay', type=float, help='nucleus parameter weight decay.', default=0.25)
+        parser.add_argument('--miner.momentum', type=float, help='optimizer momentum.', default=0.8)
         parser.add_argument('--miner.clip_gradients', type=float, help='Implement gradient clipping to avoid exploding loss on smaller architectures.', default=1.0)
         parser.add_argument('--miner.n_epochs', type=int, help='Number of training epochs.', default=sys.maxsize )
         parser.add_argument('--miner.epoch_length', type=int, help='Iterations of training per epoch', default=100)
@@ -267,7 +272,7 @@ class Miner:
         parser.add_argument('--miner.compute_remote_gradients', action='store_true', help='''Does the miner compute and return gradients from backward queries.''', default=False)
         parser.add_argument('--miner.accumulate_remote_gradients', action='store_true', help='''Does the miner accumulate remote gradients from backward queries.''', default=False)
         parser.add_argument('--miner.n_topk_chain_weights', type=int, help='Maximum number of weights to submit to chain', default=100 )
-        parser.add_argument('--miner.name', type=str, help='Trials for this miner go in miner.root / (wallet_cold - wallet_hot) / miner.name ', default='gpt2_exodus')
+        parser.add_argument('--miner.name', type=str, help='Trials for this miner go in miner.root / (wallet_cold - wallet_hot) / miner.name ', default='template miner')
         parser.add_argument('--miner.device', type=str, help='miner default training device cpu/cuda', default=("cuda" if torch.cuda.is_available() else "cpu"))
 
         bittensor.add_args( parser )
@@ -315,7 +320,6 @@ class Miner:
             
             # ---- reloads previous run ----
             try:
-                self.save()
                 self.reload()
             except:
                 self.save()
@@ -645,8 +649,8 @@ class Miner:
                     info[colored(str(uid), 'red')] = colored('{:.4f}'.format(normalized_chain_weights[uid]), 'red')
                 if self.config.neuron.use_wandb:
                     wandb_info['Chain weights:' + str(uid)]= normalized_chain_weights[uid]
-        
-        if self.config.neuron.use_wandb:
+
+        if self.config.neuron.use_wandb and (self.global_step % 10 == 0):
             try:
                 bittensor.neuron.wandb.log(wandb_info)
             except Exception as e:
