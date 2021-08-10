@@ -627,7 +627,7 @@ class Miner:
             'Stake(\u03C4)': colored('{:.3f}'.format(stake), 'green'),
             'Rank(\u03C4)': colored('{:.3f}'.format(rank), 'blue'),
             'Incentive(\u03C4/block)': colored('{:.6f}'.format(incentive), 'yellow'),
-            'L-accuracy': colored('{:.4f}'.format(output.local_accuracy), 'red'),
+            'L-accuracy': colored('{}'.format(output.local_accuracy), 'red'),
         }
         if self.config.neuron.use_wandb:
             wandb_info = {
