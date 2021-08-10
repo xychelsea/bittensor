@@ -627,7 +627,7 @@ class Miner:
             'Stake(\u03C4)': colored('{:.3f}'.format(stake), 'green'),
             'Rank(\u03C4)': colored('{:.3f}'.format(rank), 'blue'),
             'Incentive(\u03C4/block)': colored('{:.6f}'.format(incentive), 'yellow'),
-            'L-accuracy': colored('{:.4f}'.format(output.local_accuracy.item()), 'red'),
+            'L-accuracy': colored('{:.4f}'.format(output.local_accuracy), 'red'),
         }
         if self.config.neuron.use_wandb:
             wandb_info = {
@@ -639,7 +639,7 @@ class Miner:
                 'Rank':rank,
                 'Incentive':incentive,
                 'Axon QPS':bittensor.neuron.axon.stats.qps.value,
-                'local_accuracy':output.local_accuracy.item()
+                'local_accuracy':output.local_accuracy
                 }
 
         #removing normalization of chain weights for display
