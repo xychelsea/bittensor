@@ -198,7 +198,7 @@ class Nucleus(nn.Module):
         )
         # ---- Join based on weights ----
         joining_uids= torch.where(return_ops==0)[0]
-        joining_weights = F.softmax(topk_weights[(return_ops == 0)])
+        joining_weights = F.softmax(topk_weights[(return_ops == 0)],dim=0)
         output = torch.zeros( (inputs.shape[0], inputs.shape[1], bittensor.__network_dim__)).to( self.config.miner.device )
         for index, joining_weight in enumerate( joining_weights ): 
             output += responses[joining_uids[index]].to( self.config.miner.device ) * joining_weight
@@ -559,7 +559,6 @@ class Miner:
         self.optimizer = torch.optim.SGD(
             [{"params": self.nucleus.parameters()}],
             lr = state_dict['optimizer_state']['param_groups'][0]['lr'],
-            weight_decay = state_dict['optimizer_state']['param_groups'][0]['weight_decay'],
         )
         bittensor.logging.success( prefix = 'Reloaded model', sufix = '<blue>{}/model.torch</blue>'.format( self.config.miner.full_path ))
 
@@ -650,7 +649,7 @@ class Miner:
                 if self.config.neuron.use_wandb:
                     wandb_info['Chain weights:' + str(uid)]= normalized_chain_weights[uid]
 
-        if self.config.neuron.use_wandb and (self.global_step % 10 == 0):
+        if self.config.neuron.use_wandb:
             try:
                 bittensor.neuron.wandb.log(wandb_info)
             except Exception as e:
