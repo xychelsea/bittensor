@@ -62,9 +62,17 @@ class Metagraph( torch.nn.Module ):
         self.tau = torch.nn.Parameter( torch.tensor( [0.5], dtype=torch.float32), requires_grad=False )
         self.block = torch.nn.Parameter( torch.tensor( [0], dtype=torch.int64), requires_grad=False )
         self.uids = torch.nn.Parameter( torch.tensor( [], dtype=torch.int64), requires_grad=False )
+
         self.stake = torch.nn.Parameter( torch.tensor( [], dtype=torch.float32), requires_grad=False )
-        self.lastemit = torch.nn.Parameter( torch.tensor( [], dtype=torch.int64), requires_grad=False )
+        self.ranks = torch.nn.Parameter( torch.tensor( [], dtype=torch.float32), requires_grad=False )
+        self.trust = torch.nn.Parameter( torch.tensor( [], dtype=torch.float32), requires_grad=False )
+        self.incentive = torch.nn.Parameter( torch.tensor( [], dtype=torch.float32), requires_grad=False )
+        self.inflation = torch.nn.Parameter( torch.tensor( [], dtype=torch.float32), requires_grad=False )
+        self.dividends = torch.nn.Parameter( torch.tensor( [], dtype=torch.float32), requires_grad=False )
+        
+        self.lastupdate = torch.nn.Parameter( torch.tensor( [], dtype=torch.int64), requires_grad=False )
         self.weights = torch.nn.Parameter( torch.tensor( [], dtype=torch.int64), requires_grad=False )
+        self.bonds = torch.nn.Parameter( torch.tensor( [], dtype=torch.int64), requires_grad=False )
         self.endpoints = torch.nn.Parameter( torch.tensor( [], dtype=torch.int64), requires_grad=False )
         self.balances = torch.nn.Parameter( torch.tensor( [], dtype=torch.float32), requires_grad=False )
         self._endpoint_objs = None
@@ -80,47 +88,6 @@ class Metagraph( torch.nn.Module ):
         return self.stake
 
     @property
-    def I(self) -> torch.FloatTensor:
-        r""" Returns neuron incentives: tau * R / sum(R)
-        
-            Returns:
-                I (:obj:`torch.FloatTensor` of shape :obj:`(metagraph.n)`):
-                    Block incentive for each neuron. 
-        """
-        if self.n.item() == 0:
-            return torch.tensor([], dtype=torch.float32)
-        I =  (self.tau * self.ranks) / torch.sum(self.ranks)
-        I = torch.where(torch.isnan(I), torch.zeros_like(I), I)
-        return I.view(self.n)
-
-    @property
-    def incentive(self) -> torch.FloatTensor:
-        r""" Returns neuron incentives: tau * R / sum(R)
-        
-            Returns:
-                incentive (:obj:`torch.FloatTensor` of shape :obj:`(metagraph.n)`):
-                    Block incentive for each neuron. 
-        """
-        return self.I
-
-    @property
-    def ranks(self) -> torch.FloatTensor:
-        r""" Returns neuron ranks: W^t * S
-           
-            Returns:
-                ranks (:obj:`torch.FloatTensor` of shape :obj:`(metagraph.n)`):
-                    Rank of each neuron.
-
-        """
-        if self.n.item() == 0:
-            return torch.tensor([], dtype=torch.float32)
-        else:
-            S = self.S.view(self.n, 1)
-            Wt = torch.transpose(self.W, 0, 1)
-            R = torch.matmul(Wt, S).view(self.n)
-        return R
-
-    @property
     def R(self) -> torch.FloatTensor:
         r""" Returns neuron ranks: W^t * S
              
@@ -131,10 +98,49 @@ class Metagraph( torch.nn.Module ):
         return self.ranks
 
     @property
+    def T(self) -> torch.FloatTensor:
+        r""" Returns neurons trust scores
+             
+             Returns:
+                T (:obj:`torch.FloatTensor` of shape :obj:`(metagraph.n)`):
+                    Trust scores for each neuron measured in tao.
+        """
+        return self.trust
+
+    @property
+    def I(self) -> torch.FloatTensor:
+        r""" Returns neuron inflation: tau * I
+        
+            Returns:
+                inflation (:obj:`torch.FloatTensor` of shape :obj:`(metagraph.n)`):
+                    Inflation in tao for each neuron.
+        """
+        return self.inflation
+
+    @property
+    def D(self) -> torch.FloatTensor:
+        r""" Returns neuron dividends
+        
+            Returns:
+                dividends (:obj:`torch.FloatTensor` of shape :obj:`(metagraph.n)`):
+                    Dividends for each neuron measured in tao.
+        """
+        return self.dividends
+
+    @property
+    def B(self) -> torch.FloatTensor:
+        r""" Returns neuron bonds
+            Returns:
+                B (:obj:`torch.FloatTensor` of shape :obj:`(metagraph.n, metagraph.n)`):
+                    Bond matrix.
+        """
+        return self.bonds
+
+    @property
     def W(self) -> torch.FloatTensor:
         r""" Return full weight matrix from chain.
              Returns:
-                W (:obj:`torch.LongFloat` of shape :obj:`(metagraph.n, metagraph.n)`):
+                W (:obj:`torch.FloatTensor` of shape :obj:`(metagraph.n, metagraph.n)`):
                     Weight matrix.
         """
         return self.weights
@@ -206,7 +212,13 @@ class Metagraph( torch.nn.Module ):
         self.block = torch.nn.Parameter( torch.tensor( [0], dtype=torch.int64), requires_grad=False )
         self.uids = torch.nn.Parameter( torch.tensor( [], dtype=torch.int64), requires_grad=False )
         self.stake = torch.nn.Parameter( torch.tensor( [], dtype=torch.float32), requires_grad=False )
-        self.lastemit = torch.nn.Parameter( torch.tensor( [], dtype=torch.int64), requires_grad=False )
+        self.ranks = torch.nn.Parameter( torch.tensor( [], dtype=torch.float32), requires_grad=False )
+        self.trust = torch.nn.Parameter( torch.tensor( [], dtype=torch.float32), requires_grad=False )
+        self.incentive = torch.nn.Parameter( torch.tensor( [], dtype=torch.float32), requires_grad=False )
+        self.inflation = torch.nn.Parameter( torch.tensor( [], dtype=torch.float32), requires_grad=False )
+        self.dividends = torch.nn.Parameter( torch.tensor( [], dtype=torch.float32), requires_grad=False )
+        self.lastupdate = torch.nn.Parameter( torch.tensor( [], dtype=torch.int64), requires_grad=False )
+        self.bonds = torch.nn.Parameter( torch.tensor( [], dtype=torch.int64), requires_grad=False )
         self.weights = torch.nn.Parameter( torch.tensor( [], dtype=torch.int64), requires_grad=False )
         self.endpoints = torch.nn.Parameter( torch.tensor( [], dtype=torch.int64), requires_grad=False )
         self.balances = torch.nn.Parameter( torch.tensor( [], dtype=torch.float32), requires_grad=False )
@@ -276,7 +288,13 @@ class Metagraph( torch.nn.Module ):
         self.block = torch.nn.Parameter( state_dict['block'], requires_grad=False )
         self.uids = torch.nn.Parameter( state_dict['uids'], requires_grad=False )
         self.stake = torch.nn.Parameter( state_dict['stake'], requires_grad=False )
-        self.lastemit = torch.nn.Parameter( state_dict['lastemit'], requires_grad=False )
+        self.trust = torch.nn.Parameter( state_dict['trust'], requires_grad=False )
+        self.ranks = torch.nn.Parameter( state_dict['ranks'], requires_grad=False )
+        self.incentive = torch.nn.Parameter( state_dict['incentive'], requires_grad=False )
+        self.inflation = torch.nn.Parameter( state_dict['inflation'], requires_grad=False )
+        self.dividends = torch.nn.Parameter( state_dict['dividends'], requires_grad=False )
+        self.lastupdate = torch.nn.Parameter( state_dict['lastupdate'], requires_grad=False )
+        self.bonds = torch.nn.Parameter( state_dict['bonds'], requires_grad=False )
         self.weights = torch.nn.Parameter( state_dict['weights'], requires_grad=False )
         self.endpoints = torch.nn.Parameter( state_dict['endpoints'], requires_grad=False )
         self.balances = torch.nn.Parameter( state_dict['balances'], requires_grad=False )
@@ -288,9 +306,10 @@ class Metagraph( torch.nn.Module ):
         """
 
         # Query chain info.
-        for i in trange(7):
+        for i in trange(13):
             if i == 0:
-                chain_lastemit = dict( self.subtensor.get_last_emit(block=block) ) #  Optional[ List[Tuple[uid, lastemit]] ]
+                #chain_lastupdate = dict( self.subtensor.get_lastupdate(block=block) ) #  Optional[ List[Tuple[uid, lastemit]] ]
+                pass
             if i == 1:
                 chain_stake = dict( self.subtensor.get_stake(block=block) ) #  Optional[ List[Tuple[uid, stake]] ]
             if i == 2:
@@ -303,6 +322,18 @@ class Metagraph( torch.nn.Module ):
                 chain_endpoints = dict ( self.subtensor.neurons(block=block) )
             if i == 6:
                 chain_balances = self.subtensor.get_balances(block = block)
+            if i == 7:
+                chain_ranks = self.subtensor.get_ranks(block = block)
+            if i == 8:
+                chain_trust = self.subtensor.get_trust(block = block)
+            if i == 9:
+                chain_incentive = self.subtensor.get_incentive(block = block)
+            if i == 10:
+                chain_inflation = self.subtensor.get_inflation(block = block)
+            if i == 11:
+                chain_dividends = self.subtensor.get_dividends(block = block)
+            if i == 12:
+                chain_bonds = self.subtensor.get_bonds(block = block)
 
         # Build state.
         size = len(chain_stake)
@@ -310,15 +341,26 @@ class Metagraph( torch.nn.Module ):
         new_block = torch.tensor( [chain_block], dtype=torch.int64)
         new_uids = torch.tensor( range(size) ,  dtype=torch.int64)
         new_stake = torch.tensor([ float(chain_stake[uid])/float(1000000000) for uid in range( size ) ], dtype=torch.float32)
-        new_lastemit = torch.tensor( [chain_lastemit[uid] for uid in range( size ) ], dtype=torch.int64)
+        new_ranks = torch.tensor([ float(chain_ranks[uid])/float(1000000000) for uid in range( size ) ], dtype=torch.float32)
+        new_trust = torch.tensor([ float(chain_trust[uid])/float(1000000000) for uid in range( size ) ], dtype=torch.float32)
+        new_incentive = torch.tensor([ float(chain_incentive[uid])/float(1000000000) for uid in range( size ) ], dtype=torch.float32)
+        new_inflation = torch.tensor([ float(chain_inflation[uid])/float(1000000000) for uid in range( size ) ], dtype=torch.float32)
+        new_dividends = torch.tensor([ float(chain_dividends[uid])/float(1000000000) for uid in range( size ) ], dtype=torch.float32)
+        #new_lastupdate = torch.tensor( [chain_lastupdate[uid] for uid in range( size ) ], dtype=torch.int64)
 
         # Set params.
         self.n = torch.nn.Parameter( new_n, requires_grad=False )
         self.block = torch.nn.Parameter( new_block, requires_grad=False )
         self.uids = torch.nn.Parameter( new_uids, requires_grad=False )
         self.stake = torch.nn.Parameter( new_stake, requires_grad=False )
-        self.lastemit = torch.nn.Parameter( new_lastemit, requires_grad=False )
+        self.ranks = torch.nn.Parameter( new_ranks, requires_grad=False )
+        self.trust = torch.nn.Parameter( new_trust, requires_grad=False )
+        self.incentive = torch.nn.Parameter( new_incentive, requires_grad=False )
+        self.inflation = torch.nn.Parameter( new_inflation, requires_grad=False )
+        self.dividends = torch.nn.Parameter( new_dividends, requires_grad=False )
+        #self.lastupdate = torch.nn.Parameter( new_lastupdate, requires_grad=False )
         self.weights = torch.nn.Parameter( torch.zeros( [new_n, new_n] , dtype=torch.float32), requires_grad=False )
+        self.bonds = torch.nn.Parameter( torch.zeros( [new_n, new_n] , dtype=torch.float32), requires_grad=False )
         self.endpoints = torch.nn.Parameter( torch.zeros( [new_n, 250] , dtype=torch.int64), requires_grad=False )
         self.balances = torch.nn.Parameter( torch.zeros( [new_n] , dtype=torch.float32), requires_grad=False )
         self._endpoint_objs = []
@@ -328,7 +370,13 @@ class Metagraph( torch.nn.Module ):
              # Fill row from weights.
             row_weights = weight_utils.convert_weight_uids_and_vals_to_tensor( size, chain_weights_uids[uid], chain_weights_vals[uid] )
             self.weights[uid] = row_weights
-            
+
+            # Fill bonds from query.
+            row_bonds = [ 0 for _ in range( new_n )]
+            for uid_j, val in chain_bonds[uid]:
+                row_bonds[uid_j] = float(val)/float(1000000000.0)
+            self.bonds[uid] = torch.tensor( row_bonds, dtype=torch.float32 ) 
+
             # Fill Neuron info.
             endpoint_obj = bittensor.endpoint.from_dict( chain_endpoints[uid] )
             endpoint_tensor = endpoint_obj.to_tensor()

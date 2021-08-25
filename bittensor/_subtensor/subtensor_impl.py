@@ -266,7 +266,7 @@ To run a local node (See: docs/running_a_validator.md) \n
         with self.substrate as substrate:
             call = substrate.compose_call(
                 call_module='SubtensorModule', 
-                call_function='add_stake',
+                call_function='atdd_stake',
                 call_params={
                     'hotkey': wallet.hotkey.public_key,
                     'ammount_staked': amount.rao
@@ -466,7 +466,6 @@ To run a local node (See: docs/running_a_validator.md) \n
         with self.substrate as substrate:
             return substrate.get_block_number(None)
 
-
     def get_balances(self, block: int = None) -> Dict[str, float]:
         with self.substrate as substrate:
             result = substrate.iterate_map (
@@ -497,6 +496,24 @@ To run a local node (See: docs/running_a_validator.md) \n
             )
             return result
 
+    def get_bonds(self, block: int = None) -> List[Tuple[int, int]]:
+        r""" Returns a list of  pairs one for each active peer on chain.
+        Returns:
+            stake (List[Tuple[int, int]]):
+                List of stake values.
+        """
+        n = len(self.get_incentive())
+        bonds = []
+        with self.substrate as substrate:
+            for i in range(n):
+                result = substrate.query_map (
+                    module='SubtensorModule',
+                    storage_function='Bonds',
+                    params=[i]
+                )
+                bonds.append([(el[0].value, el[1].value) for el in [el for el in result]])
+        return bonds
+
     def get_stake(self, block: int = None) -> List[Tuple[int, int]]:
         r""" Returns a list of (uid, stake) pairs one for each active peer on chain.
         Returns:
@@ -512,7 +529,82 @@ To run a local node (See: docs/running_a_validator.md) \n
             )
             return result
 
-    def get_last_emit(self, block: int = None) -> List[Tuple[int, int]]:
+    def get_trust(self, block: int = None) -> List[int]:
+        r""" Returns a list of trust scores indexed by uid.
+        Returns:
+            trust (List[ int ]):
+                List of trust scores.
+        """
+        
+        with self.substrate as substrate:
+            result = substrate.query(
+                module='SubtensorModule',
+                storage_function='Trust',
+                block_hash = None if block == None else substrate.get_block_hash( block )
+            )
+            return result.value
+
+    def get_ranks(self, block: int = None) -> List[int]:
+        r""" Returns a list of rank scores indexed by uid.
+        Returns:
+            ranks (List[ int ]):
+                List of rank scores.
+        """
+        
+        with self.substrate as substrate:
+            result = substrate.query(
+                module='SubtensorModule',
+                storage_function='Ranks',
+                block_hash = None if block == None else substrate.get_block_hash( block )
+            )
+            return result.value
+
+    def get_dividends(self, block: int = None) -> List[int]:
+        r""" Returns a list of dividends indexed by uid.
+        Returns:
+            dividends (List[ int ]):
+                List of dividend payouts.
+        """
+        
+        with self.substrate as substrate:
+            result = substrate.query(
+                module='SubtensorModule',
+                storage_function='Dividends',
+                block_hash = None if block == None else substrate.get_block_hash( block )
+            )
+            return result.value
+
+    def get_inflation(self, block: int = None) -> List[int]:
+        r""" Returns a list of inflation amounts indexed by uid.
+        Returns:
+            inflation (List[ int ]):
+                List of inflation ammounts.
+        """
+        
+        with self.substrate as substrate:
+            result = substrate.query(
+                module='SubtensorModule',
+                storage_function='Inflation',
+                block_hash = None if block == None else substrate.get_block_hash( block )
+            )
+            return result.value
+
+    def get_incentive(self, block: int = None) -> List[int]:
+        r""" Returns a list of incentive scores indexed by uid.
+        Returns:
+            incentive (List[ int ]):
+                List of incentive scores.
+        """
+        
+        with self.substrate as substrate:
+            result = substrate.query(
+                module='SubtensorModule',
+                storage_function='Incentive',
+                block_hash = None if block == None else substrate.get_block_hash( block )
+            )
+            return result.value
+
+    def get_lastupdate(self, block: int = None) -> List[Tuple[int, int]]:
         r""" Returns a list of (uid, last emit) pairs for each active peer on chain.
         Returns:
             last_emit (List[Tuple[int, int]]):
@@ -521,7 +613,7 @@ To run a local node (See: docs/running_a_validator.md) \n
         with self.substrate as substrate:
             result = substrate.iterate_map (
                 module='SubtensorModule',
-                storage_function='LastEmit',
+                storage_function='LastUpdate',
                 block_hash = None if block == None else substrate.get_block_hash( block )
             )
             return result
@@ -665,7 +757,7 @@ To run a local node (See: docs/running_a_validator.md) \n
             )
             return result['result']
 
-    def get_last_emit_data_for_uid(self, uid, block: int = None) -> int:
+    def get_lastupdate_data_for_uid(self, uid, block: int = None) -> int:
         r""" Returns the last emit of the peer with the passed uid.
         Args:
             uid (int):
@@ -677,7 +769,7 @@ To run a local node (See: docs/running_a_validator.md) \n
         with self.substrate as substrate:
             result = substrate.get_runtime_state(
                 module='SubtensorModule',
-                storage_function='LastEmit',
+                storage_function='LastUpdate',
                 params = [uid],
                 block_hash = None if block == None else substrate.get_block_hash( block )
             )
