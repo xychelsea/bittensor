@@ -251,7 +251,7 @@ class Miner:
 
         # Miner training device.
         self.device = torch.device(
-            device = 'cuda:0' if (self.config.miner.device == 'cuda') else self.config.miner.device
+            device = 'cuda:1' if (self.config.miner.device == 'cuda') else self.config.miner.device
         )
 
         # Dataset of text.
