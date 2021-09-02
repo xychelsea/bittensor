@@ -187,7 +187,8 @@ class Nucleus(nn.Module):
         # distillation_loss : distillation loss between local_context and remote_context
         # distillation_loss.shape = [1]
         # This trains the local_context (student) to emulate the network context.
-        output.distillation_loss = F.mse_loss( output.local_context, output.remote_hidden.detach() )
+        # output.distillation_loss = F.mse_loss( output.local_context, output.remote_hidden.detach() )
+        output.distillation_loss = F.mse_loss( output.local_context, output.remote_hidden )
 
         if training :
             # remote_target: projection of remote_hidden onto target dimension.
@@ -250,7 +251,7 @@ class Miner:
 
         # Miner training device.
         self.device = torch.device(
-            device = self.config.miner.device
+            device = 'cuda:0' if (self.config.miner.device == 'cuda') else self.config.miner.device
         )
 
         # Dataset of text.
@@ -454,7 +455,7 @@ class Miner:
 
         # ---- Backward pass ----
         
-        output.loss = output.local_target_loss + output.distillation_loss + output.remote_target_loss
+        output.loss = output.local_target_loss # + output.distillation_loss + output.remote_target_loss
         output.loss.backward() # Accumulates gradients on the nucleus.
         clip_grad_norm_(self.nucleus.parameters(), self.config.miner.clip_gradients)
         self.optimizer.step() # Applies accumulated gradients.
