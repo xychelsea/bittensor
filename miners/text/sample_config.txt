@@ -25,6 +25,7 @@ miner.learning_rate: 1
 miner.name: template_miner
 miner.batch_size_train: 2
 miner.device: cuda
+miner.cuda_device_id: 1
 miner.epoch_length: 100
 miner.n_epochs: 500
 miner.reload: false
