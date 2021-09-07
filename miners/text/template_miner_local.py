@@ -252,12 +252,13 @@ class Miner:
         # Miner training device.
         if self.config.miner.device == "cuda":
             print("Avaliable cuda devices: ")
+            print("\tid - device name")
             for id in range(torch.cuda.device_count()):
-                print(f"{id} - {torch.cuda.get_device_name(id)}")
-            print(f"Chosen cuda device: {self.config.miner.cuda_device_id} - {torch.cuda.get_device_name(self.config.miner.cuda_device_id)}")
-        
+                print(f"\t{id} - {torch.cuda.get_device_name(id)}")
+            print(f"\nChosen cuda device:\n\t{self.config.miner.cuda_device_id} - {torch.cuda.get_device_name(self.config.miner.cuda_device_id)}")
+            
         self.device = torch.device(
-            device = f"cuda:{self.congif.miner.cuda_device_id}" if self.config.miner.device == "cuda" else "cpu"
+            device = f"cuda:{self.config.miner.cuda_device_id}" if self.config.miner.device == "cuda" else "cpu"
         )
 
         # Dataset of text.

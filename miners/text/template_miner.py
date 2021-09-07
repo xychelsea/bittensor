@@ -249,8 +249,15 @@ class Miner:
         self.config = config; Miner.check_config( self.config ); print ( self.config )
 
         # Miner training device.
+        if self.config.miner.device == "cuda":
+            print("Avaliable cuda devices: ")
+            print("\tid - device name")
+            for id in range(torch.cuda.device_count()):
+                print(f"\t{id} - {torch.cuda.get_device_name(id)}")
+            print(f"\nChosen cuda device:\n\t{self.config.miner.cuda_device_id} - {torch.cuda.get_device_name(self.config.miner.cuda_device_id)}")
+            
         self.device = torch.device(
-            device = self.config.miner.device
+            device = f"cuda:{self.config.miner.cuda_device_id}" if self.config.miner.device == "cuda" else "cpu"
         )
 
         # Dataset of text.
@@ -309,6 +316,10 @@ class Miner:
         parser.add_argument('--miner.n_topk_chain_weights', type=int, help='Maximum number of weights to submit to chain', default=100 )
         parser.add_argument('--miner.name', type=str, help='Trials for this miner go in miner.root / (wallet_cold - wallet_hot) / miner.name ', default='template miner')
         parser.add_argument('--miner.device', type=str, help='miner default training device cpu/cuda', default=("cuda" if torch.cuda.is_available() else "cpu"))
+        parser.add_argument('--miner.cuda_device_id', type=int, help='''Miner default cuda device id. 
+        The visible devices order to the miner is limited by the environmental variable CUDA_VISIBLE_DEVICES and CUDA_DEVICE_ORDER (default = PCI_BUS_ID).
+        ie. If CUDA_VISIBLE_DEVICES=3,2,1,0, the miner uses gpu #3 when cuda_device_id was set as 0.
+        ''', default=0
         parser.add_argument('--miner.timeout', type=int, help='Number of seconds to wait for axon request', default=1)
         bittensor.add_args( parser )
         Nucleus.add_args( parser ) 
