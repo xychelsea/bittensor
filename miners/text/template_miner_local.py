@@ -251,16 +251,14 @@ class Miner:
 
         # Miner training device.
         if self.config.miner.device == "cuda":
-            torch.cuda.device(self.config.miner.cuda_device_id)
+            print("Avaliable cuda devices: ")
             for id in range(torch.cuda.device_count()):
-                logger.success("Avaliable cuda device:".ljust(20) + "<blue>{}</blue>", id + ':' + torch.cuda.get_device_name(id))
-            
-            logger.success("Choosing cuda device:".ljust(20) + "<blue>{}</blue>", self.config.miner.cuda_device_id + ':' + torch.cuda.get_device_name(self.config.miner.cuda_device_id))
+                print(f"{id} - {torch.cuda.get_device_name(id)}")
+            print(f"Chosen cuda device: {self.config.miner.cuda_device_id} - {torch.cuda.get_device_name(self.config.miner.cuda_device_id)}")
         
         self.device = torch.device(
-            device = self.config.miner.device
+            device = f"cuda:{self.congif.miner.cuda_device_id}" if self.config.miner.device == "cuda" else "cpu"
         )
-
 
         # Dataset of text.
         self.dataset = bittensor.dataloader (
@@ -320,7 +318,7 @@ class Miner:
         parser.add_argument('--miner.device', type=str, help='Miner default training device cpu/cuda', default=("cuda" if torch.cuda.is_available() else "cpu"))
         parser.add_argument('--miner.cuda_device_id', type=int, help='''Miner default cuda device id. 
         The visible devices order to the miner is limited by the environmental variable CUDA_VISIBLE_DEVICES and CUDA_DEVICE_ORDER (default = PCI_BUS_ID).
-        ie. If CUDA_VISIBLE_DEVICES=3,2,1,0, the miner uses gpu #3 when cuda_device_id was set as 0
+        ie. If CUDA_VISIBLE_DEVICES=3,2,1,0, the miner uses gpu #3 when cuda_device_id was set as 0.
         ''', default=0)
         parser.add_argument('--miner.timeout', type=int, help='Number of seconds to wait for axon request', default=1)
         bittensor.add_args( parser )
