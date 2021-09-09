@@ -67,6 +67,7 @@ class Axon( bittensor.grpc.BittensorServicer ):
         self.server = server
         self.forward_callback = forwards
         self.backward_callback = backwards
+        self.started = False
         self.modality = modality if modality != None else self.find_modality()
         self.stats = SimpleNamespace(
             qps = stat_utils.timed_rolling_avg(0.0, 0.01),
@@ -566,7 +567,7 @@ class Axon( bittensor.grpc.BittensorServicer ):
     def start(self) -> 'Axon':
         r""" Starts the standalone axon GRPC server thread.
         """
-        if self.server != None:
+        if self.started == True:
             self.server.stop( grace = 1 )  
             logger.success("Axon Stopped:".ljust(20) + "<blue>{}</blue>", self.ip + ':' + str(self.port))
 
@@ -578,11 +579,15 @@ class Axon( bittensor.grpc.BittensorServicer ):
     def stop(self) -> 'Axon':
         r""" Stop the axon grpc server.
         """
-        if self.server != None:
+        if self.started == True:
             self.server.stop( grace = 1 )
-            logger.success("Axon Stopped:".ljust(20) + "<blue>{}</blue>", self.ip + ':' + str(self.port))
-        self.started = False
-        return self
+            if self.server.wait_for_termination( timeout=5) == False:
+                logger.success("Axon Stopped:".ljust(20) + "<blue>{}</blue>", self.ip + ':' + str(self.port))
+                self.started = False
+                return self
+            else : 
+                logger.exception("Axon Failed to Stop:".ljust(20) + "<blue>{}</blue>", self.ip + ':' + str(self.port))
+                return self
 
     def find_modality(self):
         r""" Detects modality from forward callbacks

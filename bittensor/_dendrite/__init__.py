@@ -17,9 +17,10 @@
 import bittensor
 import argparse
 import copy
-
+from multiprocessing.managers import BaseManager
+import threading
 from . import dendrite_impl
-
+from loguru import logger
 class dendrite:
     r""" This is the factory class for a bittensor.dendrite(). The dendrite class operates as a normal torch autograd friendly operation
     which accepts a list of bittensor.endpoints and a list of torch tensors. The passed endpoints are queried with the passed inputs and either return
@@ -68,16 +69,22 @@ class dendrite:
 
         if wallet == None:
             wallet = bittensor.wallet( config = config )
-        if receptor_pool == None:
-            receptor_pool = bittensor.receptor_pool( 
-                wallet = wallet,
-                max_worker_threads = config.dendrite.max_worker_threads,
-                max_active_receptors = config.dendrite.max_active_receptors
-            )
+        
+        try:
+            m = dendrite.manager_connect()
+            logger.success('Receptor Pool Server Connected')
+            logger.info(m.get_receptorpool())
+        except:
+            dendrite.manager_serve(config, wallet, receptor_pool)
+            m = dendrite.manager_connect()
+            logger.success('Receptor Pool Server Started')
+            logger.info(m.get_receptorpool())
+        
         return dendrite_impl.Dendrite ( 
             config = config,
             wallet = wallet, 
-            receptor_pool = receptor_pool 
+            receptor_pool = m.get_receptorpool(),
+            manager= m
         )
 
     @classmethod   
@@ -117,3 +124,29 @@ class dendrite:
         assert config.dendrite.max_worker_threads > 0, 'max_worker_threads must be larger than 0'
         assert config.dendrite.max_active_receptors > 0, 'max_active_receptors must be larger than 0'
         bittensor.wallet.check_config( config )
+    
+    @classmethod
+    def manager_connect(cls):
+        """
+        """
+        class MyManager(BaseManager):pass
+        MyManager.register('get_receptorpool')
+        manager = MyManager(address=('', 50000), authkey=b'12345')
+        manager.connect()
+        return manager
+
+    @classmethod
+    def manager_serve(cls, config, wallet, receptor_pool = None):
+        class MyManager(BaseManager):pass
+        if receptor_pool == None:
+            receptor_pool = bittensor.receptor_pool( 
+                wallet = wallet,
+                max_worker_threads = config.dendrite.max_worker_threads,
+                max_active_receptors = config.dendrite.max_active_receptors
+            )
+        MyManager.register('get_receptorpool', callable=lambda:receptor_pool,exposed=['forward','backward'])
+        server = MyManager(address=('', 50000), authkey=b'12345').get_server()
+        threading.Thread(target=server.serve_forever,daemon=True).start()
+
+class MyManager(BaseManager):
+    pass

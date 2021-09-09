@@ -20,6 +20,7 @@ import torch
 from typing import Tuple, List, Union, Optional
 from torch.autograd.function import once_differentiable
 import bittensor
+import multiprocessing
 
 from loguru import logger
 logger = logger.opt(colors=True)
@@ -55,6 +56,7 @@ class Dendrite( torch.autograd.Function ):
             config: 'bittensor.Config',
             wallet: 'bittensor.Wallet',
             receptor_pool: 'bittensor.ReceptorPool',
+            manager: 'multiprocessing.managers.BaseManager'
         ):
         r""" Initializes a new Dendrite entry point.
             Args:
@@ -64,7 +66,7 @@ class Dendrite( torch.autograd.Function ):
         self.config = config
         self.wallet = wallet
         self.receptor_pool = receptor_pool
-
+        self.manager=manager
     def __str__(self):
         return "Dendrite({}, {})".format(self.wallet.hotkey.ss58_address, self.receptor_pool)
 
@@ -118,6 +120,7 @@ class Dendrite( torch.autograd.Function ):
                         Output encodings of inputs produced by the remote endpoints. Non-responses are zeroes of common shape.
         """
         ctx.receptor_pool = dendrite.receptor_pool
+        multiprocessing.current_process().authkey = b'12345'
         ctx.endpoints, ctx.inputs, ctx.modality, ctx.timeout, ctx.does_requires_grad = endpoints, inputs, modality, timeout, requires_grad
         inputs = [ x.cpu().clone().detach() for x in inputs ]
         forward_outputs, forward_codes = ctx.receptor_pool.forward(

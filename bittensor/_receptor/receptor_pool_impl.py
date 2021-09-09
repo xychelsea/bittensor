@@ -81,7 +81,7 @@ class ReceptorPool ( torch.nn.Module ):
         # ---- Run threaded calls with executor ----
         forward_outputs = []
         forward_codes = []
-        
+
         # --- Create calls ----
         def _call_receptor_forward_with_args( receptor, inputs, modality ):
             return receptor.forward( inputs = inputs, modality = modality, timeout = timeout )
@@ -93,7 +93,7 @@ class ReceptorPool ( torch.nn.Module ):
             in list(zip( inputs, endpoints )) 
         ]
         for result in self.thread_pool.map( lambda args: _call_receptor_forward_with_args(*args), call_args ):
-            forward_outputs.append( result[0] )
+            forward_outputs.append( result[0].detach() )
             forward_codes.append( result[1] )
 
         # ---- Kill receptors ----
@@ -154,7 +154,7 @@ class ReceptorPool ( torch.nn.Module ):
             list(zip( inputs_x, grads_dy, endpoints )) 
         ]
         for result in self.thread_pool.map( lambda args: _call_receptor_backward_with_args(*args), call_args ):
-            backward_outputs.append( result[0] )
+            backward_outputs.append( result[0].detach() )
             backward_codes.append( result[1] )
 
         # ---- Kill receptors ----
