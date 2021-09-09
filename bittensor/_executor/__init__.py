@@ -1,3 +1,7 @@
+""" Create and init the executer object, 
+which hold subtensor, metagraph and dendrite object 
+for managing hot/cold key, and token staking and transfer  
+"""
 # The MIT License (MIT)
 # Copyright © 2021 Yuma Rao
 
@@ -15,14 +19,17 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 # DEALINGS IN THE SOFTWARE.
 
-import bittensor
 import argparse
 import copy
 
+import bittensor
 from . import executor_impl
 
 class executor:
-
+    """ Create and init the executer object, 
+    which hold subtensor, metagraph and dendrite object 
+    for managing hot/cold key, and token staking and transfer  
+    """
     def __new__(
             cls,
             config: 'bittensor.Config' = None,
@@ -44,7 +51,8 @@ class executor:
                 dendrite (:obj:`bittensor.Dendrite`, `optional`):
                     Bittensor dendrite client.
         """
-        if config == None: config = executor.config()
+        if config == None: 
+            config = executor.config()
         config = copy.deepcopy(config)
         bittensor.logging (
             config = config
@@ -74,12 +82,17 @@ class executor:
 
     @classmethod   
     def config(cls) -> 'bittensor.Config':
+        """ Get config from the argument parser
+            Return: bittensor.confog.object 
+        """
         parser = argparse.ArgumentParser()
         executor.add_args( parser )
         return bittensor.config( parser )
     
     @staticmethod   
     def add_args( parser: argparse.ArgumentParser ):
+        """ Pass the argument parser to modules to add the interested argument  
+        """
         bittensor.logging.add_args( parser )
         bittensor.wallet.add_args( parser )
         bittensor.subtensor.add_args( parser )
@@ -88,9 +101,10 @@ class executor:
 
     @staticmethod
     def check_config( config: 'bittensor.Config' ):
+        """ Check config for each of the modules
+        """
         bittensor.logging.check_config( config )
         bittensor.wallet.check_config( config )
         bittensor.subtensor.check_config( config )
         bittensor.metagraph.check_config( config )
         bittensor.dendrite.check_config( config )
-

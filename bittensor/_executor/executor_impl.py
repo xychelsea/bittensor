@@ -1,3 +1,7 @@
+""" Implementation of the executer object, 
+which hold subtensor, metagraph and dendrite object.
+This object is mainly for managing hot/cold key, and token staking and transfer  
+"""
 # The MIT License (MIT)
 # Copyright © 2021 Yuma Rao
 
@@ -18,19 +22,21 @@ import time
 import torch
 
 from tqdm import tqdm
-from rich.align import Align
 from rich.console import Console
 from rich.table import Table
+from loguru import logger
 
 import bittensor
 import bittensor.utils.codes as code_utils
 from bittensor.utils.balance import Balance
 
-from loguru import logger
 logger = logger.opt(colors=True)
 
 class Executor:
-
+    """ implementation of the executer object, 
+    which hold subtensor, metagraph and dendrite object 
+    This object is mainly for managing hot/cold key, and token staking and transfer  
+    """
     def __init__( 
             self, 
             wallet: 'bittensor.wallet',
@@ -90,7 +96,7 @@ class Executor:
             if cold == self.wallet.coldkeypub:
                 owned_endpoints.append( endpoints[uid] )
 
-        TABLE_DATA = []
+        table_data = []
 
         total_stake = 0.0
         total_rank = 0.0
@@ -124,7 +130,7 @@ class Executor:
             lastemit = int(self.metagraph.block - self.metagraph.lastemit[ uid ])
             lastemit = "[bold green]" + str(lastemit) if lastemit < 3000 else "[bold red]" + str(lastemit)
             row = [str(endpoint.uid), endpoint.ip + ':' + str(endpoint.port), '{:.5}'.format(stake),'{:.5}'.format(rank),  '{:.5}'.format(incentive * 14400), str(lastemit), query_time, code_str, endpoint.hotkey]
-            TABLE_DATA.append(row)
+            table_data.append(row)
             total_stake += stake
             total_rank += rank
             total_incentive += incentive * 14400
@@ -154,7 +160,7 @@ class Executor:
         table.caption = "[bold white]Coldkey Balance: [bold green]\u03C4" + str(balance.tao)
 
         console.clear()
-        for row in TABLE_DATA:
+        for row in table_data:
             table.add_row(*row)
         table.box = None
         table.pad_edge = False
