@@ -147,6 +147,3 @@ class dendrite:
         MyManager.register('get_receptorpool', callable=lambda:receptor_pool,exposed=['forward','backward'])
         server = MyManager(address=('', 50000), authkey=b'12345').get_server()
         threading.Thread(target=server.serve_forever,daemon=True).start()
-
-class MyManager(BaseManager):
-    pass
