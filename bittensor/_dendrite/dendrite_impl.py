@@ -56,7 +56,6 @@ class Dendrite( torch.autograd.Function ):
             config: 'bittensor.Config',
             wallet: 'bittensor.Wallet',
             receptor_pool: 'bittensor.ReceptorPool',
-            manager: 'multiprocessing.managers.BaseManager'
         ):
         r""" Initializes a new Dendrite entry point.
             Args:
@@ -66,7 +65,6 @@ class Dendrite( torch.autograd.Function ):
         self.config = config
         self.wallet = wallet
         self.receptor_pool = receptor_pool
-        self.manager=manager
     def __str__(self):
         return "Dendrite({}, {})".format(self.wallet.hotkey.ss58_address, self.receptor_pool)
 

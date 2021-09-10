@@ -84,7 +84,6 @@ class dendrite:
             config = config,
             wallet = wallet, 
             receptor_pool = m.get_receptorpool(),
-            manager= m
         )
 
     @classmethod   
