@@ -1,3 +1,5 @@
+""" Create and init the subtensor class, which handles interactions with the subtensor chain.
+"""
 # The MIT License (MIT)
 # Copyright © 2021 Yuma Rao
 
@@ -15,10 +17,11 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 # DEALINGS IN THE SOFTWARE.
 import argparse
-import bittensor
 import copy
+
 from substrateinterface import SubstrateInterface
 
+import bittensor
 from . import subtensor_impl
 
 custom_type_registry = {
@@ -55,7 +58,8 @@ class subtensor:
                 chain_endpoint (default=None, type=str)
                     The subtensor endpoint flag. If set, overrides the network argument.
         """
-        if config == None: config = subtensor.config()
+        if config == None: 
+            config = subtensor.config()
         config = copy.deepcopy( config )
         if chain_endpoint != None:
             config.subtensor.network = chain_endpoint
@@ -80,12 +84,17 @@ class subtensor:
 
     @staticmethod   
     def config() -> 'bittensor.Config':
+        """ Get config from the argument parser
+        Return: bittensor.config object
+        """
         parser = argparse.ArgumentParser()
         subtensor.add_args( parser )
         return bittensor.config( parser )
 
     @classmethod
     def add_args(cls, parser: argparse.ArgumentParser ):
+        """ Accept specific arguments from parser
+        """
         try:
             parser.add_argument('--subtensor.network', default='akatsuki', type=str, 
                                 help='''The subtensor network flag. The likely choices are:
@@ -103,10 +112,14 @@ class subtensor:
 
     @staticmethod   
     def check_config( config: 'bittensor.Config' ):
+        """ Check config for subtensor
+        """
         assert config.subtensor
 
     @staticmethod
     def determine_chain_endpoint(network: str):
+        """ Return entrypoint from network name as string  
+        """
         if network == "akatsuki":
             # Get first network in akatsuki entrypoints, which is main
             return bittensor.__akatsuki_entrypoints__[0]

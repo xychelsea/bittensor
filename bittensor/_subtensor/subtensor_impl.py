@@ -1,3 +1,5 @@
+""" Implementation of the subtensor class, which handles interactions with the subtensor chain.
+"""
 # The MIT License (MIT)
 # Copyright © 2021 Yuma Rao
 
@@ -15,20 +17,17 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 # DEALINGS IN THE SOFTWARE.
 import random
-import time
-from substrateinterface.base import Keypair
-import torch
-
 from typing import List, Tuple, Dict
+
+import torch
+from loguru import logger
+from substrateinterface import SubstrateInterface
 
 import bittensor
 import bittensor.utils.networking as net
 import bittensor.utils.weight_utils as weight_utils
-from substrateinterface import SubstrateInterface
-from substrateinterface.exceptions import SubstrateRequestException
 from bittensor.utils.balance import Balance
 
-from loguru import logger
 logger = logger.opt(colors=True)
 
 class Subtensor:
@@ -110,6 +109,8 @@ class Subtensor:
 
 
     def connect( self, timeout: int = 10, failure = True ) -> bool:
+        """ With substrate, try to connect to an endpoint from the network.
+        """
         attempted_endpoints = []
         while True:
             def connection_error_message():
