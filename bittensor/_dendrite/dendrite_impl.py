@@ -158,6 +158,7 @@ class Dendrite( torch.autograd.Function ):
 
         """
         if ctx.does_requires_grad:
+            multiprocessing.current_process().authkey = b'12345'
             grads_cpu = [ x.cpu().clone().detach() for x in output_grads ]
             input_grads, _ =  ctx.receptor_pool.backward (
                 endpoints = ctx.endpoints, 

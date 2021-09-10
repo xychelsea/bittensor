@@ -115,19 +115,10 @@ class dendrite:
         assert config.dendrite.max_worker_threads > 0, 'max_worker_threads must be larger than 0'
         assert config.dendrite.max_active_receptors > 0, 'max_active_receptors must be larger than 0'
         bittensor.wallet.check_config( config )
-
-    @classmethod   
-    def check_config( cls, config: 'bittensor.Config' ):
-        assert config.dendrite
-        assert 'timeout' in config.dendrite
-        assert 'requires_grad' in config.dendrite
-        assert config.dendrite.max_worker_threads > 0, 'max_worker_threads must be larger than 0'
-        assert config.dendrite.max_active_receptors > 0, 'max_active_receptors must be larger than 0'
-        bittensor.wallet.check_config( config )
     
     @classmethod
     def manager_connect(cls):
-        """
+        r"""Creates a custom manager class and connects it to the local server.
         """
         class MyManager(BaseManager):pass
         MyManager.register('get_receptorpool')
@@ -137,6 +128,8 @@ class dendrite:
 
     @classmethod
     def manager_serve(cls, config, wallet, receptor_pool = None):
+        r"""Creates/Uses a receptor pool to create a local server for receptor pool
+        """
         class MyManager(BaseManager):pass
         if receptor_pool == None:
             receptor_pool = bittensor.receptor_pool( 
