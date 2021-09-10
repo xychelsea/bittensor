@@ -109,7 +109,7 @@ class Subtensor:
 
 
     def connect( self, timeout: int = 10, failure = True ) -> bool:
-        """ With substrate, try to connect to an endpoint from the network.
+        """ With substrate, try to connect to an endpoint for the network.
         """
         attempted_endpoints = []
         while True:
@@ -468,6 +468,8 @@ To run a local node (See: docs/running_a_validator.md) \n
 
 
     def get_balances(self, block: int = None) -> Dict[str, float]:
+        """ Getting balances from all uid, with changing unit of tao
+        """
         with self.substrate as substrate:
             result = substrate.iterate_map (
                 module='System',
