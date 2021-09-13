@@ -21,7 +21,6 @@ from typing import List, Tuple, Dict
 
 import torch
 from loguru import logger
-from substrateinterface import SubstrateInterface
 
 import bittensor
 import bittensor.utils.networking as net
@@ -68,11 +67,14 @@ class Subtensor:
   
     def endpoint_for_network( 
             self,
-            blacklist: List[str] = [] 
+            blacklist: List[str] = None 
         ) -> str:
         r""" Returns a chain endpoint based on self.network.
             Returns None if there are no available endpoints.
         """
+
+        if blacklist == None:
+            blacklist = []
 
         # Chain endpoint overrides the --network flag.
         if self.chain_endpoint != None:
@@ -146,7 +148,7 @@ To run a local node (See: docs/running_a_validator.md) \n
                 logger.error( "Error while connecting to network:<blue>{}</blue> at endpoint: <blue>{}</blue>".format(self.network, ws_chain_endpoint))
                 connection_error_message()
                 if failure:
-                    raise RuntimeError('Unable to connect to network:<blue>{}</blue>.\nMake sure your internet connection is stable and the network is properly set.'.format(self.network))
+                    raise RuntimeError('Unable to connect to network:<blue>{}</blue>.\nMake sure your internet connection is stable and the network is properly set.'.format(self.network)) from RuntimeError()
                 else:
                     return False
 
