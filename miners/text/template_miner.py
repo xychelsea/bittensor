@@ -67,7 +67,8 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 class Nucleus(nn.Module):
-
+    """ Define out model with remote and local forward functions  
+    """
     def __init__(self, config ):
         super(Nucleus, self).__init__()
         self.config = config
@@ -104,9 +105,16 @@ class Nucleus(nn.Module):
         parser.add_argument('--nucleus.punishment', type=float, help='The punishment on the chain weights that do not respond ', default=0.001 )
 
     def init_weights(self):
+        """ Initialize the weight of decode to be uniform 
+        """
         initrange = 0.1
         self.remote_decoder.weight.data.uniform_(-initrange, initrange)
         self.local_decoder.weight.data.uniform_(-initrange, initrange)
+
+    def forward(self, *args, **kwargs):
+        """ Default forward pass to local_forward
+        """
+        self.local_forward(*args, **kwargs)
 
     def local_forward(self, inputs: torch.int64, training : bool = True) -> SimpleNamespace:
         """ Forward pass through GPT2 nucleus.
@@ -243,12 +251,20 @@ class Nucleus(nn.Module):
         return output
 
 class Miner:
-
+    """ 
+    This miner manages all the training and chain weight setting to the peers
+    It also setup axon that serves the requests from peers 
+    """ 
     def __init__( self, config: 'bittensor.config' = None ):
         r""" Initializes a miner with the passed config.
         """
-        if config == None: config = Miner.config()
-        self.config = config; Miner.check_config( self.config ); print ( self.config )
+        if config == None: 
+            self.config = Miner.config()
+        else:
+            self.config = config
+        
+        Miner.check_config( self.config )
+        print ( self.config )
 
         # Miner training device.
         self.device = torch.device(

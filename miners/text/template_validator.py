@@ -21,19 +21,24 @@ Example:
     $ python miners/text/template_validator.py
 
 """
-import argparse
-import bittensor
-import torch
-import wandb
-import datetime
 import os
+import argparse
+import datetime
+
 from termcolor import colored
+import wandb
+from qqdm import qqdm, format_str
+import torch
+from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from torch.nn.utils import clip_grad_norm_
 import torch.nn.functional as F
-from qqdm import qqdm, format_str
-from torch.nn import TransformerEncoder, TransformerEncoderLayer
+
+import bittensor
 
 def config ():
+    """ Get config from the argument parser
+    Return: bittensor.config object 
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('--miner.topk', type=int, help='the number of peers queried during each remote forward call', default=20)
     parser.add_argument('--miner.learning_rate', type=float, help='Training initial learning rate.', default=1)
@@ -56,6 +61,8 @@ def config ():
     return bittensor.config( parser )
 
 def main( config ):
+    """ Run the validator that set weights to other nodes
+    """
     print (config)
 
     # Init bittensor logging.
@@ -81,6 +88,8 @@ def main( config ):
 
     # Instantiate validator model.
     class Validator(torch.nn.Module):
+        """ Validate and set weight to other nodes
+        """
         def __init__(self, config ):
             super(Validator, self).__init__()
             self.layers = TransformerEncoderLayer( bittensor.__network_dim__, config.nucleus.nhead, config.nucleus.nhid, config.nucleus.dropout )
@@ -90,6 +99,9 @@ def main( config ):
             self.chain_weights = torch.nn.Parameter(torch.ones( [ metagraph.n.item() ] , requires_grad=True))
 
         def forward( self, inputs ):
+            """ Forward the input to the peers, wrap the response with our encoder and decoder
+             and return the loss
+            """
             remote_hidden = self.remote( inputs.to( device ) )
             encoded_hidden = self.encoder( remote_hidden )
             decoded_targets = self.decoder ( encoded_hidden )
@@ -101,6 +113,8 @@ def main( config ):
             return loss, decoded_targets
 
         def remote ( self, inputs ):
+            """ Query the peers with dendrite, return the sum of (dendrite response * chain_weight from those top k peer) as output
+            """
             # ---- Topk Weights ---- (TODO: check if the gaussians are enough disrupt the chain weights)
             real_topk = min( config.nucleus.topk, metagraph.n.item() ) 
             noise = torch.normal( 0, torch.std( self.chain_weights ).item()+0.0000001, size=( self.chain_weights.size())).to( device )
@@ -152,12 +166,12 @@ def main( config ):
 
             # --- Run epoch.
             batches = dataset.dataloader( config.miner.epoch_length )
-            progress_bar = qqdm(enumerate(batches), total=len(batches), desc=format_str('blue', f'Epoch Progress'))
+            progress_bar = qqdm(enumerate(batches), total=len(batches), desc=format_str('blue', 'Epoch Progress'))
             for _, (inputs) in progress_bar:
 
                 # Training step.
                 optimizer.zero_grad() 
-                loss, _ = validator( inputs )
+                loss, _ = validator.forward( inputs )
                 loss.backward()
                 clip_grad_norm_(validator.parameters(), config.miner.clip_gradients)
                 optimizer.step()
@@ -170,7 +184,8 @@ def main( config ):
                 # Step logs.
                 info = { 'Loss': colored('{:.4f}'.format(loss.item()), 'green')}
                 for weight, uid_j in list(zip(final_weights.tolist(), topk_uids.tolist())):
-                    if weight > 0.001: info[ str(uid_j) ] = colored('{:.4f}'.format( weight ), 'green' if validator.chain_weights.grad[ uid_j ] < 0 else 'red')
+                    if weight > 0.001: 
+                        info[ str(uid_j) ] = colored('{:.4f}'.format( weight ), 'green' if validator.chain_weights.grad[ uid_j ] < 0 else 'red')
                 progress_bar.set_infos( info )
 
             # ---  Set mechanism weights.
@@ -201,7 +216,8 @@ def main( config ):
                 'Incentive': metagraph.I[ uid ].item(),
             } 
             for weight, uid_j in list(zip(final_weights.tolist(), topk_uids.tolist())):
-                if weight != 0: wand_data[ 'w_{},{}'.format( uid, uid_j ) ] = weight
+                if weight != 0: 
+                    wand_data[ 'w_{},{}'.format( uid, uid_j ) ] = weight
             wandb.log( wand_data )
 
 if __name__ == "__main__":

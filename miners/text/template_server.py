@@ -22,15 +22,18 @@ Example:
 
 """
 import argparse
-import bittensor
-import torch
 import time
-import wandb
 import datetime
-from qqdm import qqdm
+
+import torch
+import wandb
 from transformers import BertModel, BertConfig
 
+import bittensor
+
 def config ():
+    """ Set config for the server 
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('--miner.learning_rate', type=float, help='Training initial learning rate.', default=1)
     parser.add_argument('--miner.momentum', type=float, help='optimizer momentum.', default=0.8)
@@ -43,6 +46,8 @@ def config ():
     return bittensor.config( parser )
 
 def main( config ):
+    """ Run the server
+    """
     print (config)
 
     # Init bittensor logging.
@@ -89,12 +94,12 @@ def main( config ):
 
     # Define our forward function.
     def forward_text ( pubkey, inputs_x, modality ):
-        return model( inputs_x.to(device) ).last_hidden_state
+        return model.forward( inputs_x.to(device) ).last_hidden_state
 
     # Define our backward function.
     def backward_text ( pubkey:str, inputs_x, grads_dy, modality ):
         with torch.enable_grad():
-            outputs_y = model( inputs_x.to(device) ).last_hidden_state
+            outputs_y = model.forward( inputs_x.to(device) ).last_hidden_state
             torch.autograd.backward (
                 tensors = [ outputs_y.to(device) ],
                 grad_tensors = [ grads_dy.to(device) ]
