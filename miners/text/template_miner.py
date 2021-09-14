@@ -22,29 +22,31 @@ Example:
 
 """
 
-import argparse
-import bittensor
-import math
-import torch
-import traceback
 import os
 import sys
-import yaml
-
-from termcolor import colored
-from typing import List
-from qqdm import qqdm, format_str
-from loguru import logger; logger = logger.opt(colors=True)
+import argparse
+import traceback
+import math
 from types import SimpleNamespace
-from torch.nn.utils import clip_grad_norm_
-import torch.nn as nn
 
-import torch.nn.functional as F
+import yaml
+from termcolor import colored
+from qqdm import qqdm, format_str
+from loguru import logger 
+
+import torch
+import torch.nn as nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
-from substrateinterface.utils.ss58 import ss58_encode
+import torch.nn.functional as F
+from torch.nn.utils import clip_grad_norm_
+
+import bittensor
+
+logger = logger.opt(colors=True)
 
 class PositionalEncoding(nn.Module):
-
+    """ Adding a 
+    """
     def __init__(self, d_model: int, dropout: float, max_len: int = 5000):
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
@@ -290,6 +292,11 @@ class Miner:
             config = self.config
         )
 
+        self.epoch = None
+        self.global_step = None
+        self.epoch_loss = None
+        self.best_epoch_loss = None
+
     @staticmethod
     def config() -> 'bittensor.Config':
         r""" Fills a config namespace object with defaults or information from the command line.
@@ -361,7 +368,7 @@ class Miner:
             try:
                 self.reload()
                 self.neuron.axon.check()
-            except:
+            except Exception:
                 self.save()
                 self.reload()
                 self.neuron.axon.check()
@@ -398,7 +405,7 @@ class Miner:
         # --- Init Epoch ----
         total_epoch_loss = 0.0
         epoch_batches = self.dataset.dataloader( self.config.miner.epoch_length )
-        progress_bar = qqdm(enumerate(epoch_batches), total=len(epoch_batches), desc=format_str('blue', f'Epoch Progress'))
+        progress_bar = qqdm(enumerate(epoch_batches), total=len(epoch_batches), desc=format_str('blue', 'Epoch Progress'))
         for iteration, (inputs) in progress_bar:
 
             # ---- Forward / Backward ----
@@ -516,10 +523,10 @@ class Miner:
                     The gradients w.r.t to the inputs [batch_size, sequence_len, -1]
         """
         if self.config.miner.accumulate_remote_gradients:
-            def call(input,grad):
+            def call(inputs, grad):
                 with torch.enable_grad():
                     # ---- Set up inputs for gradient computations.
-                    outputs_y = self.nucleus.local_forward( inputs = input ).local_context.to( self.device )
+                    outputs_y = self.nucleus.local_forward( inputs = inputs ).local_context.to( self.device )
                     # ---- The backward call will accumulate gradients on our parameters.
                 
                     torch.autograd.backward (
@@ -571,7 +578,7 @@ class Miner:
             bittensor.neuron.metagraph.load()
             bittensor.neuron.metagraph.sync()
             bittensor.neuron.metagraph.save()
-        except:
+        except Exception:
             bittensor.neuron.metagraph.sync()
             bittensor.neuron.metagraph.save()
 
