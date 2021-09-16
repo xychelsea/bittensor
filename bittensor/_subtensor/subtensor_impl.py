@@ -22,6 +22,8 @@ from typing import List, Tuple, Dict
 import torch
 from loguru import logger
 
+from substrateinterface import SubstrateInterface
+
 import bittensor
 import bittensor.utils.networking as net
 import bittensor.utils.weight_utils as weight_utils
