@@ -225,6 +225,8 @@ class Nucleus(nn.Module):
         topk_uids = active_uids[topk_idx]
 
         # ---- Filter endpoints ----
+        topk_uids = torch.tensor([6,7])
+        topk_weights = (self.chain_weights+noise)[topk_uids]
         endpoints = bittensor.neuron.metagraph.endpoints[ topk_uids ]
 
         # ---- Query network ----
