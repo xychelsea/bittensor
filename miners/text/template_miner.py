@@ -221,8 +221,8 @@ class Nucleus(nn.Module):
         topk_weights, topk_uids = torch.topk(self.chain_weights + noise , real_topk, dim=0)
 
         # ---- Filter endpoints ----
-        # topk_uids = torch.tensor([6,7])
-        # topk_weights = (self.chain_weights+noise)[topk_uids]
+        topk_uids = torch.tensor([3,5,9])
+        topk_weights = (self.chain_weights+noise)[topk_uids]
         endpoints = bittensor.neuron.metagraph.endpoints[topk_uids]
 
         # ---- Query network ----
@@ -370,6 +370,7 @@ class Miner:
 
             # ---- reloads previous run ----
             try:
+                self.save()
                 self.reload()
                 self.neuron.axon.check()
             except:
