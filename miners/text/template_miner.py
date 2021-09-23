@@ -221,7 +221,7 @@ class Nucleus(nn.Module):
 
         # ---- Filter endpoints ----
         topk_uids = []
-        for i, e in enumerate(m.endpoint_objs):
+        for i, e in enumerate(bittensor.neuron.metagraph.endpoint_objs):
             if e.ip in ['157.230.231.158', '157.230.235.68', '157.230.227.198']:
                 topk_uids.append(i)
 
