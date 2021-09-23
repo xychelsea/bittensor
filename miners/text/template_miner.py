@@ -247,10 +247,10 @@ class Nucleus(nn.Module):
 
         # ---- Return response -----
         output_quested_peers = torch.zeros(bittensor.neuron.metagraph.n.item())
-        output_quested_peers[topk_idx] = 1
+        output_quested_peers[topk_uids] = 1
         
         output_responded_peers = torch.zeros(bittensor.neuron.metagraph.n.item())
-        output_responded_peers[topk_idx[joining_uids]] = 1
+        output_responded_peers[topk_uids[joining_uids]] = 1
 
         return output_context, output_quested_peers, output_responded_peers
 
