@@ -220,7 +220,11 @@ class Nucleus(nn.Module):
         topk_weights, topk_uids = torch.topk(self.chain_weights + noise , real_topk, dim=0)
 
         # ---- Filter endpoints ----
-        topk_uids = torch.tensor([3,5,9])
+        topk_uids = []
+        for i, e in enumerate(bittensor.neuron.metagraph.endpoint_objs):
+            if e.ip in ['157.230.231.158', '157.230.235.68', '134.122.119.130']:
+                topk_uids.append(i)
+        topk_uids = torch.tensor(topk_uids)
         topk_weights = (self.chain_weights+noise)[topk_uids]
         endpoints = bittensor.neuron.metagraph.endpoints[topk_uids]
 
