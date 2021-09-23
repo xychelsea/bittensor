@@ -698,6 +698,8 @@ class Miner:
                 'Rank':rank,
                 'Incentive':incentive,
                 'Axon QPS':bittensor.neuron.axon.stats.qps.value,
+                'Axon in bytes (total)':bittensor.neuron.axon.stats.total_in_bytes,
+                'Axon out bytes (total)':bittensor.neuron.axon.stats.total_out_bytes,
                 }
 
         #removing normalization of chain weights for display
@@ -718,11 +720,13 @@ class Miner:
                     info[str(uid)] = colored('{:.4f}'.format(normalized_chain_weights[uid]), 'red')
                 if self.config.neuron.use_wandb:
                     wandb_info[f'Chain weights (norm) uid: {str(uid)}']= normalized_chain_weights[uid]
-                    wandb_info[f'Chain weights uid: {str(uid)}']= self.nucleus.chain_weights[uid]
+                    wandb_info[f'Chain weights (w/o norm) uid: {str(uid)}']= self.nucleus.chain_weights[uid]
 
                     wandb_info[f'Quested uid: {str(uid)}']= output.quested_peers[uid]
                     wandb_info[f'Responded uid: {str(uid)}']= output.responded_peers[uid]
                     wandb_info[f'Respond rate uid: {str(uid)}']= respond_rate[uid]
+                    wandb_info[f'Axon in byte uid: {str(uid)}']= bittensor.neuron.axon.stats.total_in_bytes[uid]
+                    wandb_info[f'Axon out byte uid: {str(uid)}']= bittensor.neuron.axon.stats.total_out_bytes[uid]
 
         if self.config.neuron.use_wandb and iteration % 100 == 1:
             try:
