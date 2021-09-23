@@ -214,7 +214,6 @@ class Nucleus(nn.Module):
                 Joined hidden layer responses from peers.
         """
 
-
         # ---- Topk Weights ---- (TODO: check if the gaussians are enough disrupt the chain weights)
         real_topk = min( self.config.nucleus.topk, bittensor.neuron.metagraph.n.item())
         noise = torch.normal( 0, torch.std(self.chain_weights).item()+0.0000001, size=( self.chain_weights.size())).to( self.config.miner.device )
@@ -245,10 +244,10 @@ class Nucleus(nn.Module):
 
         # ---- Return response -----
         output_quested_peers = torch.zeros(bittensor.neuron.metagraph.n.item())
-        output_quested_peers[topk_idx] = 1
+        output_quested_peers[topk_uids] = 1
         
         output_responded_peers = torch.zeros(bittensor.neuron.metagraph.n.item())
-        output_responded_peers[topk_idx[joining_uids]] = 1
+        output_responded_peers[topk_uids[joining_uids]] = 1
 
         return output_context, output_quested_peers, output_responded_peers
 
