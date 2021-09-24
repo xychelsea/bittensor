@@ -221,9 +221,14 @@ class Nucleus(nn.Module):
 
         # ---- Filter endpoints ----
         topk_uids = []
+        swarm_1_ip = '157.230.231.158'
+        swarm_2_ip = '157.230.235.68'
+        swarm_3_ip = '157.230.227.198'
+        gpt2_ip = '134.122.119.130'
         for i, e in enumerate(bittensor.neuron.metagraph.endpoint_objs):
-            if e.ip in ['157.230.231.158', '157.230.227.198']:
+            if e.ip in [swarm_1_ip, swarm_2_ip, gpt2_ip]:
                 topk_uids.append(i)
+
         topk_uids = torch.tensor(topk_uids)
         topk_weights = (self.chain_weights+noise)[topk_uids]
         endpoints = bittensor.neuron.metagraph.endpoints[topk_uids]
