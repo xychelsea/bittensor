@@ -44,7 +44,11 @@ nucleus.nhid: 200
 nucleus.nhead: 2
 nucleus.nlayers: 2
 nucleus.topk: 30
+<<<<<<< HEAD
 nucleus.punishment: 0.0001
+=======
+nucleus.punishment: 0
+>>>>>>> BIT-120-validator_block_step
 
 subtensor.chain_endpoint: null
 subtensor.network: akatsuki
