@@ -572,10 +572,9 @@ class Miner:
             )
             return output.local_hidden
 
-        uid =self.neuron.metagraph.hotkeys.index(pubkey)
-        priority = self.neuron.metagraph.S[uid]
-        future = self.thread_pool.submit(call,inputs=inputs_x,priority=priority)
-        return future.result(timeout= self.config.miner.timeout)
+        priority = self.neuron.metagraph.S[ self.neuron.metagraph.hotkeys.index(pubkey) ] / sys.getsizeof(inputs_x)
+        future = self.thread_pool.submit( call,inputs = inputs_x, priority = priority )
+        return future.result(timeout = self.config.miner.timeout)
 
     # ---- Axon Backward call ----
     def backward_text ( self, pubkey:str, inputs_x:torch.FloatTensor, grads_dy:torch.FloatTensor ) -> torch.FloatTensor:
@@ -610,13 +609,8 @@ class Miner:
                     )
                     return inputs_x.grad if inputs_x.grad != None else None                    
 
-            uid =self.neuron.metagraph.hotkeys.index(pubkey)
-            priority = self.neuron.metagraph.S[uid]
-            future = self.thread_pool.submit(call, input=inputs_x.to( self.device ), grad=grads_dy.to( self.device ), priority=priority)
-            return future.result(timeout= self.config.miner.timeout)            
-        # if ! compute_remote_gradients, NO-OP.
-        else:
-            return None
+            priority = self.neuron.metagraph.S[ self.neuron.metagraph.hotkeys.index(pubkey) ] / sys.getsizeof(inputs_x)
+            self.thread_pool.submit(call, input=inputs_x.to( self.device ), grad=grads_dy.to( self.device ), priority=priority)
 
     def checkpoint( self ):
         r""" Optionally Saves, updates and then reloads the miner training state.
