@@ -20,8 +20,8 @@ import os
 from typing import Callable
 
 # Bittensor code and protocol version.
-__version__ = '1.4.0'
-__version_as_int__ = (100 * 1) + (10 * 4) + (1 * 0)  # Integer representation
+__version__ = '1.5.0'
+__version_as_int__ = (100 * 1) + (10 * 5) + (1 * 0)  # Integer representation
 
 # Vocabulary dimension.
 #__vocab_size__ = len( tokenizer ) + len( tokenizer.additional_special_tokens) + 100 # Plus 100 for eventual token size increase.
@@ -92,6 +92,7 @@ from bittensor._receptor.receptor_pool_impl import ReceptorPool as ReceptorPool
 from bittensor._threadpool.priority_thread_pool_impl import PriorityThreadPoolExecutor as PriorityThreadPoolExecutor
 
 import bittensor.utils.networking as net
+from bittensor.utils.networking import get_external_ip as external_ip
 
 # Singluar Neuron instance useful for creating simple miners.
 neuron = None
