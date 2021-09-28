@@ -146,7 +146,7 @@ def main( config ):
             swarm_3_ip = '157.230.227.198'
             gpt2_ip = '134.122.119.130'
             for i, e in enumerate(metagraph.endpoint_objs):
-                if e.ip in [swarm_1_ip, swarm_2_ip, gpt2_ip]:
+                if e.ip in [swarm_1_ip, swarm_2_ip, swarm_3_ip]:
                     topk_uids.append(i)
 
             topk_uids = torch.tensor(topk_uids)
