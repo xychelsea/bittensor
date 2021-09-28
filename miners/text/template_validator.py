@@ -102,10 +102,23 @@ def main( config ):
 
         def remote ( self, inputs ):
             # ---- Topk Weights ---- (TODO: check if the gaussians are enough disrupt the chain weights)
-            real_topk = min( config.nucleus.topk, metagraph.n.item() ) 
+            # real_topk = min( config.nucleus.topk, metagraph.n.item() ) 
             noise = torch.normal( 0, torch.std( self.chain_weights ).item()+0.0000001, size=( self.chain_weights.size())).to( device )
-            topk_weights, topk_uids = torch.topk( self.chain_weights + noise, real_topk, dim=0 ) 
+            # topk_weights, topk_uids = torch.topk( self.chain_weights + noise, real_topk, dim=0 ) 
 
+            # ---- Filter endpoints ----
+            topk_uids = []
+            swarm_1_ip = '157.230.231.158'
+            swarm_2_ip = '157.230.235.68'
+            swarm_3_ip = '157.230.227.198'
+            gpt2_ip = '134.122.119.130'
+            for i, e in enumerate(metagraph.endpoint_objs):
+                if e.ip in [swarm_1_ip, swarm_2_ip, swarm_3_ip]:
+                    topk_uids.append(i)
+
+            topk_uids = torch.tensor(topk_uids)
+            topk_weights = (self.chain_weights+noise)[topk_uids]
+            
             # ---- Query network ----
             responses, return_ops = dendrite.forward_text ( 
                 endpoints = metagraph.endpoints[ topk_uids ], 
