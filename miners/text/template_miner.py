@@ -241,7 +241,7 @@ class Nucleus(nn.Module):
         endpoints = bittensor.neuron.metagraph.endpoints[ topk_uids ]
 
         # ---- Query network ----
-        responses, return_ops = bittensor.neuron.dendrite.forward_text (
+        responses, return_ops, query_times = bittensor.neuron.dendrite.forward_text (
             endpoints = endpoints,
             inputs = inputs
         )
@@ -326,7 +326,7 @@ class Miner:
         """
         # ---- Add miner args.
         parser = argparse.ArgumentParser()
-        parser.add_argument('--miner.config', type=str, help='If set, defaults are overridden by passed file.')
+        parser.add_argument('--config', type=str, help='If set, defaults are overridden by passed file.')
         parser.add_argument('--miner.learning_rate', type=float, help='Training initial learning rate.', default=1)
         parser.add_argument('--miner.weight_decay', type=float, help='nucleus parameter weight decay.', default=0.25)
         parser.add_argument('--miner.momentum', type=float, help='optimizer momentum.', default=0.8)
@@ -342,25 +342,9 @@ class Miner:
         parser.add_argument('--miner.device', type=str, help='miner default training device cpu/cuda', default=("cuda" if torch.cuda.is_available() else "cpu"))
         parser.add_argument('--miner.timeout', type=int, help='Number of seconds to wait for axon request', default=1)
         parser.add_argument('--miner.blacklist', type=float, help='Amount of stake (tao) in order not to get blacklisted', default=0)
-        parser.add_argument('--miner.sync_block_time', type=int, help='How often the sync the miner with metagraph, in terms of block time', default=15)
-
-
         bittensor.add_args( parser )
         Nucleus.add_args( parser ) 
         bittensor.prioritythreadpool.add_args( parser )
- 
-        # ---- Loads config_file and updates defaults
-        config_file_path = vars(parser.parse_known_args()[0])['miner.config']
-        if config_file_path:
-            config_file_path = os.path.expanduser(config_file_path)
-            try:
-                with open(config_file_path) as f:
-                    params_config = yaml.safe_load(f)
-                    print('Config File Detected at {} updating defaults'.format(config_file_path))
-                    parser.set_defaults(**params_config)
-            except Exception as e:
-                print('Error in loading: {} using default parser settings'.format(e))
-
         return bittensor.config( parser )
 
     @staticmethod
@@ -422,8 +406,49 @@ class Miner:
             # --- Run until n_epochs ----
             while self.epoch < self.config.miner.n_epochs:
                 try:
-                    # ---- Train state ----
-                    self.run_epoch()
+
+                    # ---- Run epoch ----
+                    total_epoch_loss = 0.0
+                    start_block = self.neuron.subtensor.get_current_block() + 1
+                    end_block = start_block + self.config.miner.epoch_length
+                    block_steps = [ start_block + block_delta for block_delta in range(start_block, end_block)]
+                    print(block_steps)
+                    progress_bar = qqdm( block_steps, total=len(block_steps), desc=format_str('white', f'Epoch:'))
+                    for block in progress_bar:
+
+                        # --- Iterate over batches until the end of the block.
+                        current_block = self.neuron.subtensor.get_current_block()
+                        while block <= current_block:
+                            
+                            # ---- Forward pass ----
+                            inputs = next( self.dataset )
+                            output = self.nucleus.remote_forward (
+                                inputs = inputs.to( self.device ),
+                                training = True,
+                            )
+
+                            # ---- Backward pass ----
+                            output.loss = output.local_target_loss + output.distillation_loss + output.remote_target_loss
+                            total_epoch_loss += output.local_target_loss.item()
+                            output.loss.backward() # Accumulates gradients on the nucleus.
+                            clip_grad_norm_(self.nucleus.parameters(), self.config.miner.clip_gradients)
+
+                        # ---- Apply and zero accumulated gradients.
+                        self.optimizer.step() 
+                        self.optimizer.zero_grad()
+
+                        # ---- Block logs.
+                        self.logs (
+                            progress_bar,
+                            iteration = block,
+                            output = output,
+                        )
+                        self.global_step += 1
+                        last_block = current_block
+
+                    # ---- Update params ----
+                    self.epoch_loss = total_epoch_loss / self.config.miner.epoch_length
+                    self.epoch += 1
 
                     # ---- Checkpoint state ----
                     self.checkpoint()
@@ -434,6 +459,7 @@ class Miner:
 
                 except Exception as e:
                     # --- Unknown error ----
+                    print (e)
                     logger.exception('Unknown exception: {} with traceback {}', e, traceback.format_exc())
                     if self.config.miner.restart_on_failure == True:
                         logger.info('Restarting from last saved state.')
@@ -579,7 +605,7 @@ class Miner:
             return output.local_hidden
 
         priority = self.neuron.metagraph.S[ self.neuron.metagraph.hotkeys.index(pubkey) ] / sys.getsizeof(inputs_x)
-        future = self.thread_pool.submit( call,inputs = inputs_x, priority = priority )
+        future = self.thread_pool.submit( call, inputs = inputs_x, priority = priority )
         return future.result(timeout = self.config.miner.timeout)
 
     # ---- Axon Backward call ----

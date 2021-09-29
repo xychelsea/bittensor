@@ -159,7 +159,7 @@ def main( config ):
             topk_weights = (self.chain_weights+noise)[topk_uids]
 
             # ---- Query network ----
-            responses, return_ops = dendrite.forward_text ( 
+            responses, return_ops, query_times = dendrite.forward_text ( 
                 endpoints = metagraph.endpoints[ topk_uids ], 
                 inputs = inputs
             )
@@ -206,7 +206,6 @@ def main( config ):
         resume = config.miner.resume,
         save_code = True
     )
-
     wandb.watch( validator, log = 'all', log_freq = 10 )
 
     # Optionally resume.
