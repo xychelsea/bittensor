@@ -57,6 +57,6 @@ wallet.path: ~/.bittensor/wallets/
 wandb.directory: default
 wandb.name: default
 wandb.offline: false
-wandb.project: default
-wandb.run_group: default
+wandb.project: validator_test
+wandb.run_group: swarm
 wandb.tags: default
