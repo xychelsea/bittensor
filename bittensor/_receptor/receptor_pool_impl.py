@@ -108,7 +108,7 @@ class ReceptorPool ( torch.nn.Module ):
         except concurrent.futures._base.TimeoutError:
             forward_outputs= [torch.zeros( (inputs.size(0), inputs.size(1), bittensor.__network_dim__), dtype=torch.float32)] * len(endpoints) 
             forward_codes= [bittensor.proto.ReturnCode.Timeout] * len(endpoints) 
-            forward_times= [15] * len(endpoints)
+            forward_times= [int(timeout*10)] * len(endpoints)
 
         # ---- Kill receptors ----
         self._destroy_receptors_over_max_allowed()
@@ -182,7 +182,7 @@ class ReceptorPool ( torch.nn.Module ):
         except concurrent.futures._base.TimeoutError:
             backward_outputs= [torch.zeros( (inputs_x.size(0), inputs_x.size(1), bittensor.__network_dim__), dtype=torch.float32)] * len(endpoints) 
             backward_codes= [bittensor.proto.ReturnCode.Timeout] * len(endpoints) 
-            backward_times= [15] * len(endpoints)
+            backward_times= [int(timeout*10)] * len(endpoints)
 
         # ---- Kill receptors ----
         self._destroy_receptors_over_max_allowed()
