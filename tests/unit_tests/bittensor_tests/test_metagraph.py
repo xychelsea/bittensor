@@ -1,4 +1,5 @@
 import bittensor
+import torch
 
 def test_create( ):
     global metagraph
@@ -8,6 +9,16 @@ def test_create( ):
 def test_print_empty():
     metagraph = bittensor.metagraph()
     print (metagraph)
+
+def test_forward():
+    meta = bittensor.metagraph()
+    row = torch.ones( (meta.n), dtype = torch.float32 )
+    for i in range( meta.n ):
+        meta(i, row)
+    meta.sync()
+    row = torch.ones( (meta.n), dtype = torch.float32 )
+    for i in range( meta.n ):
+        meta(i, row)
 
 def test_load_sync_save():
     metagraph = bittensor.metagraph()
@@ -25,11 +36,13 @@ def test_state_dict():
     state = metagraph.state_dict()
     assert 'uids' in state
     assert 'stake' in state
-    assert 'lastemit' in state
+    assert 'last_update' in state
     assert 'block' in state
     assert 'tau' in state
-    assert 'weights.0' in state
-    assert 'neurons.0' in state
+    assert 'weights' in state
+    assert 'endpoints' in state
+
+test_load_sync_save()
 
 
 

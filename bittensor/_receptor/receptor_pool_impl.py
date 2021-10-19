@@ -1,3 +1,5 @@
+""" Manages a pool of grpc connections as receptors
+"""
 # The MIT License (MIT)
 # Copyright © 2021 Yuma Rao
 
@@ -15,30 +17,37 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 # DEALINGS IN THE SOFTWARE.
 
-import bittensor
 import math
+from typing import Tuple, List
+
 import torch
-
-from concurrent.futures import ThreadPoolExecutor
-from types import SimpleNamespace
-from typing import Tuple, List, Union, Optional
-import bittensor.utils.stats as stat_utils
-
 from loguru import logger
+import concurrent
+import traceback
+import bittensor
+
 logger = logger.opt(colors=True)
 
 class ReceptorPool ( torch.nn.Module ):
-
+    """ Manages a pool of grpc connections as receptors
+    """
     def __init__(
         self, 
         wallet: 'bittensor.Wallet',
         thread_pool: 'ThreadPoolExecutor',
         max_active_receptors: int
     ):
+        super().__init__()
         self.wallet = wallet
         self.thread_pool = thread_pool
         self.max_active_receptors = max_active_receptors
         self.receptors = {}
+
+    def __str__(self):
+        return "ReceptorPool({},{})".format(len(self.receptors), self.max_active_receptors)
+
+    def __repr__(self):
+        return self.__str__()
 
     def forward(
             self, 
@@ -46,7 +55,7 @@ class ReceptorPool ( torch.nn.Module ):
             inputs: List[torch.Tensor],
             modality: bittensor.proto.Modality,
             timeout: int
-        ) -> Tuple[List[torch.Tensor], List[int]]:
+        ) -> Tuple[List[torch.Tensor], List[int], List[float]]:
         r""" Forward tensor inputs to endpoints.
 
             Args:
@@ -67,14 +76,18 @@ class ReceptorPool ( torch.nn.Module ):
                 forward_outputs (:obj:`List[torch.FloatTensor]` of shape :obj:`num_endpoints * (batch_size, sequence_len, bittensor.network_size)]`, `required`):
                     Output encodings of tensors produced by remote endpoints. Non-responses are zeroes of common shape.
 
-                forwad_codes (:obj:`List[bittensor.proto.ReturnCodes]` of shape :obj:`(num_endpoints)`, `required`):
+                forward_codes (:obj:`List[bittensor.proto.ReturnCodes]` of shape :obj:`(num_endpoints)`, `required`):
                     dendrite backward call return ops.
+
+                forward_times (:obj:`List[float]` of shape :obj:`(num_endpoints)`, `required`):
+                    dendrite backward call times
         """
         if len(endpoints) != len(inputs):
             raise ValueError('Endpoints must have the same length as passed inputs. Got {} and {}'.format(len(endpoints), len(inputs)))
         # ---- Run threaded calls with executor ----
         forward_outputs = []
         forward_codes = []
+        forward_times = []
         
         # --- Create calls ----
         def _call_receptor_forward_with_args( receptor, inputs, modality ):
@@ -86,15 +99,27 @@ class ReceptorPool ( torch.nn.Module ):
             for (inputs, endpoint) 
             in list(zip( inputs, endpoints )) 
         ]
-        for result in self.thread_pool.map( lambda args: _call_receptor_forward_with_args(*args), call_args ):
-            forward_outputs.append( result[0] )
-            forward_codes.append( result[1] )
+        results = self.thread_pool.map( lambda args: _call_receptor_forward_with_args(*args), call_args, timeout=timeout*10)
+        try:
+            for result in results:
+                forward_outputs.append( result[0] )
+                forward_codes.append( result[1] )
+                forward_times.append( result[2] )
+        except concurrent.futures._base.TimeoutError:
+            forward_outputs= [torch.zeros( (inputs[0].size(0), inputs[0].size(1), bittensor.__network_dim__), dtype=torch.float32)] * len(endpoints) 
+            forward_codes= [bittensor.proto.ReturnCode.Timeout] * len(endpoints) 
+            forward_times= [15] * len(endpoints)
+        except Exception as e:
+            forward_outputs= [torch.zeros( (inputs[0].size(0), inputs[0].size(1), bittensor.__network_dim__), dtype=torch.float32)] * len(endpoints) 
+            forward_codes= [bittensor.proto.ReturnCode.UnknownException] * len(endpoints) 
+            forward_times= [15] * len(endpoints)
+            logger.exception('Exception encountered: {}'.format(e))
 
         # ---- Kill receptors ----
         self._destroy_receptors_over_max_allowed()
         
         # ---- Return ----
-        return forward_outputs, forward_codes
+        return forward_outputs, forward_codes, forward_times
 
     def backward(
                 self, 
@@ -103,7 +128,7 @@ class ReceptorPool ( torch.nn.Module ):
                 grads_dy: List[torch.Tensor],
                 modality: bittensor.proto.Modality,
                 timeout: int
-            ) -> Tuple[List[torch.Tensor], List[int]]:
+            ) -> Tuple[List[torch.Tensor], List[int], List[float]]:
         r""" Backward tensor inputs to endpoints.
 
             Args:
@@ -127,8 +152,11 @@ class ReceptorPool ( torch.nn.Module ):
                 backward_outputs (:obj:`List[torch.FloatTensor]` of shape :obj:`num_endpoints * (batch_size, sequence_len, -1)]`, `required`):
                     gradients of returned from backward call.
 
-                backward_codes (:obj:`torch.LongTensor` of shape :obj:`(num_endpoints)`, `required`):
+                backward_codes (:obj:`List[bittensor.proto.ReturnCodes]` of shape :obj:`(num_endpoints)`, `required`):
                     dendrite call return ops.
+
+                backward_times (:obj:`List[float]` of shape :obj:`(num_endpoints)`, `required`):
+                    dendrite call times.
         """
         if len(endpoints) != len(inputs_x):
             raise ValueError('Endpoints and inputs must have the same length. Got {} and {}'.format(len(endpoints), len(inputs_x)))
@@ -136,7 +164,8 @@ class ReceptorPool ( torch.nn.Module ):
         # ---- Run threaded calls with executor ----
         backward_outputs = []
         backward_codes = []
-        
+        backward_times = []
+
         # --- Create calls ----
         def _call_receptor_backward_with_args( receptor, inputs_x, grads_dy , modality ):
             return receptor.backward( inputs_x = inputs_x, grads_dy = grads_dy, modality = modality, timeout = timeout )
@@ -147,15 +176,24 @@ class ReceptorPool ( torch.nn.Module ):
             for (inputs_x, grads_dy, endpoint) in 
             list(zip( inputs_x, grads_dy, endpoints )) 
         ]
-        for result in self.thread_pool.map( lambda args: _call_receptor_backward_with_args(*args), call_args ):
-            backward_outputs.append( result[0] )
-            backward_codes.append( result[1] )
+        results = self.thread_pool.map( lambda args: _call_receptor_backward_with_args(*args), call_args, timeout=timeout*10)
+
+        # --- catch any timeout issues due to threadpool --- 
+        try:
+            for result in results:
+                backward_outputs.append( result[0] )
+                backward_codes.append( result[1] )
+                backward_times.append( result[2] )
+        except concurrent.futures._base.TimeoutError:
+            backward_outputs= [torch.zeros( (inputs_x.size(0), inputs_x.size(1), bittensor.__network_dim__), dtype=torch.float32)] * len(endpoints) 
+            backward_codes= [bittensor.proto.ReturnCode.Timeout] * len(endpoints) 
+            backward_times= [15] * len(endpoints)
 
         # ---- Kill receptors ----
         self._destroy_receptors_over_max_allowed()
         
         # ---- Return ----
-        return backward_outputs, backward_codes
+        return backward_outputs, backward_codes, backward_times
 
     def _destroy_receptors_over_max_allowed( self ):
         r""" Destroys receptors based on QPS until there are no more than max_active_receptors.
@@ -204,4 +242,3 @@ class ReceptorPool ( torch.nn.Module ):
             self.receptors[ receptor.endpoint.hotkey ] = receptor
 
         return receptor
-

@@ -1,3 +1,5 @@
+""" Create and init endpoint object, with attr hotkey, coldkey, modality and ip
+"""
 # The MIT License (MIT)
 # Copyright © 2021 Yuma Rao
 
@@ -15,17 +17,21 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 # DEALINGS IN THE SOFTWARE.
 
-import torch
 import json
+import torch
 import bittensor
-from loguru import logger
 
 from . import endpoint_impl
 
+ENDPOINT_BUFFER_SIZE = 250
+
 class endpoint:
+    """ Create and init neuron object, with attr hotkey, coldkey, modality and ip
+    """
 
     def __new__( 
         cls, 
+        version: int,
         uid:int, 
         hotkey:str, 
         ip:str, 
@@ -34,11 +40,14 @@ class endpoint:
         modality:int, 
         coldkey:str 
     ) -> 'bittensor.Endpoint':
-        return endpoint_impl.Endpoint( uid, hotkey, ip, ip_type, port, modality, coldkey )
+        return endpoint_impl.Endpoint( version, uid, hotkey, ip, ip_type, port, modality, coldkey )
 
     @staticmethod
     def from_dict(endpoint_dict: dict) -> 'bittensor.Endpoint':
+        """ Return an endpoint with spec from dictionary
+        """
         return endpoint_impl.Endpoint(
+            version = endpoint_dict['version'],
             uid = endpoint_dict['uid'], 
             hotkey = endpoint_dict['hotkey'], 
             port = endpoint_dict['port'],
@@ -50,11 +59,33 @@ class endpoint:
     
     @staticmethod
     def from_tensor( tensor: torch.LongTensor) -> 'bittensor.Endpoint':
+        """ Return an endpoint with spec from tensor
+        """
+        if len(tensor.shape) == 2:
+            if tensor.shape[0] != 1:
+                error_msg = 'Endpoints tensor should have a single first dimension or none got {}'.format( tensor.shape[0] )
+                raise ValueError(error_msg)
+            tensor = tensor[0]
+
+        if tensor.shape[0] != ENDPOINT_BUFFER_SIZE:
+            error_msg = 'Endpoints tensor should be length {}, got {}'.format( tensor.shape[0], ENDPOINT_BUFFER_SIZE)
+            raise ValueError(error_msg)
+            
         endpoint_list = tensor.tolist()
-        endpoint_bytes = bytearray( endpoint_list )
-        endpoint_string = endpoint_bytes.decode('utf-8')
-        endpoint_dict = json.loads( endpoint_string )
-        return endpoint.from_dict(endpoint_dict)
+        if -1 in endpoint_list:
+            endpoint_list = endpoint_list[ :endpoint_list.index(-1)]
+            
+        if len(endpoint_list) == 0:
+            return endpoint.dummy()
+        else:
+            endpoint_bytes = bytearray( endpoint_list )
+            endpoint_string = endpoint_bytes.decode('utf-8')
+            endpoint_dict = json.loads( endpoint_string )
+            return endpoint.from_dict(endpoint_dict)
+
+    @staticmethod
+    def dummy():
+        return endpoint_impl.Endpoint(uid=-1,version=0, hotkey = "", ip_type = 4, ip = '0.0.0.0', port = 0, modality= 0, coldkey = "")
 
 
 

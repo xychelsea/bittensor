@@ -72,30 +72,7 @@ message TensorMessage {
 	// i.e. b'4c598ff31b68eb6c458c2dc51b25367fa213c566088077f46d93156148429d78'
 	// SIZE: 256-bits (32-bytes)
 	string hotkey = 2;
-
-	// Nounce: [OPTIONAL] Incrementing nounce to identify message ordering.
-	// Used ensure with signature to protect against spoofing attacks.
-	// Likely a timestamp.
-	// i.e. nounce = nounce + 1 
-	// SIZE: 32-bits (4-bytes)
-	int64 nounce = 3;
-
-	// Signature: [OPTIONAL] Digital signature linking the nounce neuron_key.
-	// Prevents spoofing attacks where an adversary sends messages as other peers.
-	// NOTE: this field does not link the signature to the tensor inputs. New signatures do not need
-	// to be generated for each message and can be periodically created with a new incrementing nounce.
-	// Endpoints ensure that that signature is correct and that nounce is incrementing.
-	// $ python
-	// >>> from cryptography.hazmat.backends import default_backend
-	// >>> from cryptography.hazmat.primitives import hashes
-	// >>> digest = hashes.Hash(hashes.SHA1(), backend=default_backend())
-	// >>> digest.update(public_key.encode('utf-8'))
-	// >>> digest.update(bytes(nounce))
-	// >>> digest = digest.finalize()
-	// signature = private_key.sign(digest) # to create.
-	// >>> assert (nounce >= last_nounce) and neuron_key.verify(signature, digest) # to verify.
-	bytes signature = 4;
-
+	
 	// Tensors: [REQUIRED] 1 or more tensors passed on the wire.
 	// SIZE: variable.
 	// NOTE: During backward calls the tensors should be ordered [input_1, input_2, ... grad_1, grad_2, ...] 
@@ -106,32 +83,37 @@ message TensorMessage {
 
 	// Message associated with return code.
 	string message = 7; 
+
+	// Requires grad: [OPTIONAL] Does this tensor require a gradient.
+	bool requires_grad = 8;
 }
 
 // Return codes from Backward and Forward call.
 enum ReturnCode {
-	Success = 0; // Succesfull query.
-	Timeout = 1; // Request timeout.
-	Backoff = 2; // Call triggered a backoff.
-	Unavailable = 3; // Endpoint not available.
-	NotImplemented = 4; // Modality not implemented.
-	EmptyRequest = 5; // Request is empty.
-	EmptyResponse = 6; // Response is empty.
-	InvalidResponse = 7; // Request is invalid.
-	InvalidRequest = 8; // Response is invalid.
-	RequestShapeException = 9; // Request has invalid shape.
-	ResponseShapeException = 10; // Response has invalid shape.
-	RequestSerializationException = 11; // Request failed to serialize.
-	ResponseSerializationException = 12; // Response failed to serialize.
-	RequestDeserializationException = 13; // Request failed to deserialize.
-	ResponseDeserializationException = 14; // Response failed to deserialize.
-	NotServingNucleus = 15; // Receiving Neuron is not serving a Nucleus to query.
-	NucleusTimeout = 16; // Processing on the server side timeout.
-	NucleusFull = 17; // Returned when the processing queue on the server is full.
-	RequestIncompatibleVersion = 18; // The request handler is incompatible with the request version.
-	ResponseIncompatibleVersion = 19; // The request handler is incompatible with the request version.
-	SenderUnknown = 20; // The requester is not known by the reciever. 
-	UnknownException = 21; // Unknown exception.
+	NoReturn = 0; // Default Value
+	Success = 1; // Succesfull query.
+	Timeout = 2; // Request timeout.
+	Backoff = 3; // Call triggered a backoff.
+	Unavailable = 4; // Endpoint not available.
+	NotImplemented = 5; // Modality not implemented.
+	EmptyRequest = 6; // Request is empty.
+	EmptyResponse = 7; // Response is empty.
+	InvalidResponse = 8; // Request is invalid.
+	InvalidRequest = 9; // Response is invalid.
+	RequestShapeException = 10; // Request has invalid shape.
+	ResponseShapeException = 11; // Response has invalid shape.
+	RequestSerializationException = 12; // Request failed to serialize.
+	ResponseSerializationException = 13; // Response failed to serialize.
+	RequestDeserializationException = 14; // Request failed to deserialize.
+	ResponseDeserializationException = 15; // Response failed to deserialize.
+	NotServingNucleus = 16; // Receiving Neuron is not serving a Nucleus to query.
+	NucleusTimeout = 17; // Processing on the server side timeout.
+	NucleusFull = 18; // Returned when the processing queue on the server is full.
+	RequestIncompatibleVersion = 19; // The request handler is incompatible with the request version.
+	ResponseIncompatibleVersion = 20; // The request handler is incompatible with the request version.
+	SenderUnknown = 21; // The requester is not known by the reciever. 
+	UnknownException = 22; // Unknown exception.
+	Unauthenticated = 23; // Authentication failed.
 }
 
 // A serialized tensor object created using the serializer class.

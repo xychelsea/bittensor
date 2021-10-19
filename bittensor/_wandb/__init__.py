@@ -1,3 +1,5 @@
+""" Create and init wandb to logs the interested parameters to weight and biases
+"""
 # The MIT License (MIT)
 # Copyright © 2021 Yuma Rao
 
@@ -18,12 +20,13 @@
 import os
 import argparse
 import copy
-import bittensor
 import wandb as wb
+import bittensor
 
 
 class wandb:
-
+    """ Create and init wandb to logs the interested parameters to weight and biases
+    """
     def __new__(
             cls,
             config: 'bittensor.config' = None,
@@ -38,7 +41,8 @@ class wandb:
             hot_pubkey: str = None,
             root_dir: str = None
         ):
-        if config == None: config = wandb.config()
+        if config == None: 
+            config = wandb.config()
         config = copy.deepcopy( config )
         config.neuron.api_key = api_key if api_key != None else config.neuron.api_key
         config.wandb.name = name if name != None else config.wandb.name
@@ -46,7 +50,6 @@ class wandb:
         config.wandb.tags = tags if tags != None else config.wandb.tags
         config.wandb.run_group = run_group if run_group != None else config.wandb.run_group
         config.wandb.directory = directory if directory != None else config.wandb.directory
-        config.wandb.offline = offline if offline != None else config.wandb.offline
         wandb.check_config( config )
 
         if config.neuron.api_key != 'default':
@@ -54,37 +57,55 @@ class wandb:
         else:
             pass
         os.environ["WANDB_NAME"] = config.wandb.name 
-        os.environ["WANDB_PROJECT"] = config.wandb.project if config.wandb.project != 'default' else cold_pubkey
+        os.environ["WANDB_PROJECT"] = config.wandb.project if config.wandb.project != 'default' else str(cold_pubkey)[:8]
         os.environ["WANDB_TAGS"] = config.wandb.tags 
-        os.environ["WANDB_RUN_GROUP"] = config.wandb.run_group if config.wandb.run_group != 'default' else hot_pubkey
+        os.environ["WANDB_RUN_GROUP"] = config.wandb.run_group if config.wandb.run_group != 'default' else str(hot_pubkey)[:8]
         os.environ["WANDB_DIR"] = config.wandb.directory if config.wandb.directory != 'default' else root_dir
-        os.environ["WANDB_MODE"] = 'offline' if config.wandb.offline else 'run'
 
-        return wb.init(config = config, config_exclude_keys = ['neuron'], save_code = True)
+        wb.init(config = config, config_exclude_keys = ['neuron'])
 
     @classmethod
     def add_args(cls, parser: argparse.ArgumentParser ):
+        """ Accepting specific argument from parser
+        """
         try:
             parser.add_argument('--neuron.api_key', type = str, help='''Optionally pass wandb api key for use_wandb''', default='default')
-            parser.add_argument('--wandb.name', type=str, help='''Optionally pass wandb run name for use_wandb''', default='default')
-            parser.add_argument('--wandb.project', type=str, help='''Optionally pass wandb project name for use_wandb''', default='default')
-            parser.add_argument('--wandb.tags', type=str, help='''Optionally pass wandb tags for use_wandb''', default='default')
-            parser.add_argument('--wandb.run_group', type = str, help='''Optionally pass wandb group name for use_wandb''', default='default')
-            parser.add_argument('--wandb.directory', type = str, help='''Optionally pass wandb directory for use_wandb''', default='default')
-            parser.add_argument('--wandb.offline', type = bool, help='''Optionally pass wandb offline option for use_wandb''', default=False)
+            parser.add_argument('--wandb.name', type=str, help='''Optionally pass wandb run name for use_wandb''', default = bittensor.defaults.wandb.name)
+            parser.add_argument('--wandb.project', type=str, help='''Optionally pass wandb project name for use_wandb''', default = bittensor.defaults.wandb.project)
+            parser.add_argument('--wandb.tags', type=str, help='''Optionally pass wandb tags for use_wandb''', default = bittensor.defaults.wandb.tags)
+            parser.add_argument('--wandb.run_group', type = str, help='''Optionally pass wandb group name for use_wandb''', default = bittensor.defaults.wandb.run_group)
+            parser.add_argument('--wandb.directory', type = str, help='''Optionally pass wandb directory for use_wandb''', default = bittensor.defaults.wandb.directory)
+            parser.add_argument('--wandb.offline', type = bool, help='''Optionally pass wandb offline option for use_wandb''', default = bittensor.defaults.wandb.offline)
             
         except argparse.ArgumentError:
             # re-parsing arguments.
             pass
+
+    @classmethod   
+    def add_defaults(cls, defaults):
+        """ Adds parser defaults to object from enviroment variables.
+        """
+        defaults.wandb = bittensor.Config()
+        defaults.wandb.name = os.getenv('BT_WANDB_NAME') if os.getenv('BT_WANDB_NAME') != None else 'default'
+        defaults.wandb.project = os.getenv('BT_WANDB_PROJECT') if os.getenv('BT_WANDB_PROJECT') != None else 'default'
+        defaults.wandb.tags = os.getenv('BT_WANDB_TAGS') if os.getenv('BT_WANDB_TAGS') != None else 'default'
+        defaults.wandb.run_group = os.getenv('BT_WANDB_RUN_GROUP') if os.getenv('BT_WANDB_RUN_GROUP') != None else 'default'
+        defaults.wandb.directory = os.getenv('BT_WANDB_DIRECTORY') if os.getenv('BT_WANDB_DIRECTORY') != None else 'default'
+        defaults.wandb.offline = os.getenv('BT_WANDB_OFFLINE') if os.getenv('BT_WANDB_OFFLINE') != None else False
     
     @classmethod   
     def config(cls) -> 'bittensor.Config':
+        """ Get config from argument parser
+        Return bittensor.config object
+        """
         parser = argparse.ArgumentParser()
         wandb.add_args( parser )
         return bittensor.config( parser )
     
     @classmethod   
     def check_config(cls, config: 'bittensor.Config' ):
+        """ Checking config for types
+        """
         assert isinstance(config.neuron.api_key, str), 'wandb.api_key must be a string'
         assert isinstance(config.wandb.project, str), 'wandb.project must be a string'
         assert isinstance(config.wandb.name , str), 'wandb.name must be a string'

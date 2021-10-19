@@ -1,3 +1,5 @@
+""" Represent bittensor balance of the wallet with rao and tao
+"""
 # The MIT License (MIT)
 # Copyright © 2021 Yuma Rao
 
@@ -16,7 +18,9 @@
 # DEALINGS IN THE SOFTWARE.
 
 class Balance:
-    unit = "Tao"
+    """ Represent bittensor balance of the wallet with rao and tao
+    """
+    unit = "\u03C4"
     rao : int
     tao: float
 
@@ -32,7 +36,10 @@ class Balance:
         return self.tao
 
     def __str__(self):
-        return "{unit:s} {balance:.9f}".format(unit=self.unit, balance=self.tao)
+        return "\u03C4" + str(self.tao)
+
+    def __repr__(self):
+        return self.__str__()
 
     def __eq__(self, other):
         return self.rao == other.rao
@@ -54,5 +61,7 @@ class Balance:
 
     @staticmethod
     def from_float(amount : float):
+        """ Given tao (float), return Balance object with rao(int) and tao(float), where rao = int(tao*pow(10,9))
+        """
         rao = int(amount * pow(10, 9))
         return Balance(rao)

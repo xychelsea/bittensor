@@ -1,5 +1,11 @@
+
 #!/bin/bash
 set -u
+
+# enable  command completion
+set -o history -o histexpand
+
+python="python3"
 
 abort() {
   printf "%s\n" "$1"
@@ -12,6 +18,15 @@ getc() {
   /bin/stty raw -echo
   IFS= read -r -n 1 -d '' "$@"
   /bin/stty "$save_state"
+}
+
+exit_on_error() {
+    exit_code=$1
+    last_command=${@:2}
+    if [ $exit_code -ne 0 ]; then
+        >&2 echo "\"${last_command}\" command failed with exit code ${exit_code}."
+        exit $exit_code
+    fi
 }
 
 wait_for_user() {
@@ -58,31 +73,28 @@ cd "/usr" || exit 1
 
 linux_install_pre() {
     sudo apt-get update 
-    sudo apt-get install --no-install-recommends --no-install-suggests -y apt-utils curl git cmake build-essential 
+    sudo apt-get install --no-install-recommends --no-install-suggests -y apt-utils curl git cmake build-essential
+    exit_on_error $?
 }
 
 linux_install_python() {
-    which -s python3.8
+    which $python
     if [[ $? != 0 ]] ; then
-        ohai "Installing python3.8"
-        sudo apt-get install --no-install-recommends --no-install-suggests -y python3.8
+        ohai "Installing python"
+        sudo apt-get install --no-install-recommends --no-install-suggests -y $python
     else
-        ohai "Updating python3.8"
-        sudo apt-get update python3.8
+        ohai "Updating python"
+        sudo apt-get install --only-upgrade $python
     fi
+    exit_on_error $? 
     ohai "Installing python tools"
-    sudo apt-get install --no-install-recommends --no-install-suggests -y python3-pip python3.8-dev python3.8-venv
+    sudo apt-get install --no-install-recommends --no-install-suggests -y $python-pip $python-dev 
+    exit_on_error $? 
 }
 
-linux_activate_installed_python() {
-    ohai "Creating python virtualenv"
-    mkdir -p ~/.bittensor/bittensor
-    cd ~/.bittensor/
-    python3.8 -m venv env
-    ohai "Entering bittensor-environment"
-    source env/bin/activate
-    ohai "You are using python@3.8$"
+linux_update_pip() {
+    PYTHONPATH=$(which $python)
+    ohai "You are using python@ $PYTHONPATH$"
     ohai "Installing python tools"
-    python -m pip install --upgrade pip
-    python -m pip install python-dev
+    $python -m pip install --upgrade pip
 }

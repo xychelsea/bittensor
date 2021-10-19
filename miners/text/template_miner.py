@@ -30,6 +30,8 @@ import traceback
 import os
 import sys
 import yaml
+import wandb
+import concurrent
 
 from termcolor import colored
 from typing import List
@@ -43,6 +45,27 @@ import torch.nn.functional as F
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from substrateinterface.utils.ss58 import ss58_encode
 
+class PositionalEncoding(nn.Module):
+
+    def __init__(self, d_model: int, dropout: float, max_len: int = 5000):
+        super().__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        position = torch.arange(max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        pe = torch.zeros(max_len, 1, d_model)
+        pe[:, 0, 0::2] = torch.sin(position * div_term)
+        pe[:, 0, 1::2] = torch.cos(position * div_term)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x: torch.tensor) -> torch.tensor:
+        """
+        Args:
+            x: Tensor, shape [seq_len, batch_size, embedding_dim]
+        """
+        x = x + self.pe[:x.size(0)]
+        return self.dropout(x)
+
 class Nucleus(nn.Module):
 
     def __init__(self, config ):
@@ -55,6 +78,7 @@ class Nucleus(nn.Module):
         # Local Model
         local_layers = TransformerEncoderLayer( bittensor.__network_dim__, self.config.nucleus.nhead, self.config.nucleus.nhid, self.config.nucleus.dropout )
         local_hidden_layers = TransformerEncoderLayer( bittensor.__network_dim__, self.config.nucleus.nhead, self.config.nucleus.nhid, self.config.nucleus.dropout )
+        self.local_pos_encoder = PositionalEncoding(bittensor.__network_dim__, self.config.nucleus.dropout)
         self.local_encoder = TransformerEncoder( local_layers, self.config.nucleus.nlayers )
         self.local_hidden = TransformerEncoder( local_hidden_layers, self.config.nucleus.nlayers )
         self.local_decoder = nn.Linear( bittensor.__network_dim__, bittensor.__vocab_size__ , bias=False)
@@ -66,10 +90,11 @@ class Nucleus(nn.Module):
 
         self.loss_fct = nn.CrossEntropyLoss()
         self.chain_weights = nn.Parameter(torch.ones( [0] , requires_grad=True))
+        self.noise_offset = 0.0000001
         self.init_weights()
 
     @staticmethod
-    def add_args( parser: argparse.ArgumentParser ):    
+    def add_args( parser: argparse.ArgumentParser ):
         r""" Add custom params to the parser.
         """
         parser.add_argument('--nucleus.nhid', type=int, help='the dimension of the feedforward network model in nn.TransformerEncoder', default=200)
@@ -87,7 +112,7 @@ class Nucleus(nn.Module):
     def local_forward(self, inputs: torch.int64, training : bool = True) -> SimpleNamespace:
         """ Forward pass through GPT2 nucleus.
             Args:
-                inputs (:obj:`torch.int64` of shape :obj:`(batch_size, block_size)`, `required`): 
+                inputs (:obj:`torch.int64` of shape :obj:`(batch_size, block_size)`, `required`):
                     Batch_size length x list of text sentences.
                 training (:obj:`bool')`, `optional`, defaults to True):
                     Switch to True if this forward pass computes a CLM loss.
@@ -97,8 +122,8 @@ class Nucleus(nn.Module):
                     local_context (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_len, bittensor.__network_dim__)`, `required`):
                         Hidden layer context.
                     local_target (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_len, bittensor.__vocab_size__)`, `optional`):
-                        MLM Target predictions produced using local_context. 
-                    local_target_loss (:obj:`torch.FloatTensor` of shape :obj:`(1)`, `optional`): 
+                        MLM Target predictions produced using local_context.
+                    local_target_loss (:obj:`torch.FloatTensor` of shape :obj:`(1)`, `optional`):
                         MLM loss using local_context.
                 }
         """
@@ -108,6 +133,10 @@ class Nucleus(nn.Module):
         # local_context: hidden layer encoding of sequence with local_context.
         # local_context.shape = [batch_size, sequence_len, bittensor.__network_dim__]
         output.local_context = self.local_encoder( self.embedding( inputs ) )* math.sqrt(bittensor.__network_dim__)
+
+        # local_context: adding positional encoding to local_context.
+        # local_context.shape = [batch_size, sequence_len, bittensor.__network_dim__]
+        output.local_context = self.local_pos_encoder(output.local_context)
 
         if training :
             # local_hidden: local model which learns a new projection from the local_context
@@ -121,29 +150,29 @@ class Nucleus(nn.Module):
             # local_target_loss: MLM loss between local_target and passed targets.
             # local_target_loss.shape = [1]
             shift_logits = output.local_target[..., :-1, :].contiguous()
-            shift_labels = inputs[..., 1:].contiguous()     
+            shift_labels = inputs[..., 1:].contiguous()
             output.local_target_loss = self.loss_fct( shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1) )
-            
-            predictions=shift_logits.max(2).indices
+
+            predictions=shift_logits.detach().max(2).indices
             output.local_accuracy = (predictions==shift_labels).sum().item()/predictions.nelement()
         return output
 
     def remote_forward(self, inputs: torch.int64, training: bool) -> SimpleNamespace:
         """ Forward pass inputs and labels through the GPT2 module and into the remote network.
         Args:
-            inputs (:obj:`torch.int64` of shape :obj:`(batch_size, sequence_len)`, `required`): 
+            inputs (:obj:`torch.int64` of shape :obj:`(batch_size, sequence_len)`, `required`):
                 Tokenized sentences using bittensor.tokenizer()
             training (:obj:`bool')`, `optional`, defaults to True):
                 Switch to True if this forward pass computes an MLM loss.
         Returns:
-            self.local_forward() + SimpleNamespace ( 
+            self.local_forward() + SimpleNamespace (
                 remote_context (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_len, bittensor.__network_dim__)`, `required`):
                     Joined responses from the network.
                 remote_target (:obj:`torch.FloatTensor` of shape :obj:`(batch_size,  bittensor.__vocab_size__)`, `optional`):
                     Target predictions using the remote_context layer.
                 remote_target_loss (:obj:`torch.FloatTensor` of shape :obj:`(1)`, `optional`):
                     MLM loss using remote_target.
-                distillation_loss (:obj:`torch.FloatTensor` of shape :obj:`(1)`, `optional`): 
+                distillation_loss (:obj:`torch.FloatTensor` of shape :obj:`(1)`, `optional`):
                     Distillation loss between local_context and remote_context.
             )
         """
@@ -172,7 +201,7 @@ class Nucleus(nn.Module):
             # remote_target_loss.shape = [1]
             shift_logits = output.remote_target[..., :-1, :].contiguous()
 
-            shift_labels = inputs[..., 1:].contiguous()            
+            shift_labels = inputs[..., 1:].contiguous()
             output.remote_target_loss = self.loss_fct( shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1) )
 
         return output
@@ -180,38 +209,45 @@ class Nucleus(nn.Module):
     def remote(self, inputs: torch.int64 ) -> torch.float32:
         """ Forwards the inputs through the network, selects the topk peers based on self.chain_weights.
         Args:
-            inputs (:obj:`torch.int64` of shape :obj:`(batch_size, sequence_len)`, `required`): 
+            inputs (:obj:`torch.int64` of shape :obj:`(batch_size, sequence_len)`, `required`):
                 Batch_size length list of text sentences.
         Returns:
-            outputs (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_len, bittensor.__network_dim__)`, `optional`): 
+            outputs (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_len, bittensor.__network_dim__)`, `optional`):
                 Joined hidden layer responses from peers.
         """
+
+        # ---- Get active peers and their weights ---- 
+        active_uids = torch.where(bittensor.neuron.metagraph.active > 0)[0]
+        active_chain_weights = self.chain_weights[active_uids]
+
         # ---- Topk Weights ---- (TODO: check if the gaussians are enough disrupt the chain weights)
-        real_topk = min( self.config.nucleus.topk, bittensor.neuron.metagraph.n.item() ) 
-        noise = torch.normal( 0, torch.std(self.chain_weights).item()+0.0000001, size=( self.chain_weights.size())).to( self.config.miner.device )
-        topk_weights, topk_uids = torch.topk( self.chain_weights + noise, real_topk, dim=0 ) 
+        real_topk = min( self.config.nucleus.topk, bittensor.neuron.metagraph.n.item(), len(active_uids))
+        noise = torch.normal( 0, torch.std(active_chain_weights).item()+self.noise_offset, size=( active_chain_weights.size())).to( self.config.miner.device )
+        topk_weights, topk_idx = torch.topk(active_chain_weights + noise , real_topk, dim=0)
+        topk_uids = active_uids[topk_idx]
 
         # ---- Filter endpoints ----
-        endpoints = [bittensor.neuron.metagraph.endpoints[uid] for uid in topk_uids]
+        endpoints = bittensor.neuron.metagraph.endpoints[ topk_uids ]
 
         # ---- Query network ----
-        responses, return_ops = bittensor.neuron.dendrite.forward_text ( 
-            endpoints = endpoints, 
-            inputs = [inputs.long() for _ in endpoints]
+        responses, return_ops, query_times = bittensor.neuron.dendrite.forward_text (
+            endpoints = endpoints,
+            inputs = inputs
         )
 
         # ---- Join based on weights ----
-        joining_uids= torch.where(return_ops==0)[0]
-        joining_weights = F.softmax( topk_weights[(return_ops == 0)], dim = 0 )
+        joining_uids= torch.where( return_ops == bittensor.proto.ReturnCode.Success )[0]
+        joining_weights = F.softmax( topk_weights[(return_ops == bittensor.proto.ReturnCode.Success)], dim = 0 ) 
         output = torch.zeros( (inputs.shape[0], inputs.shape[1], bittensor.__network_dim__)).to( self.config.miner.device )
-        for index, joining_weight in enumerate( joining_weights ): 
+        for index, joining_weight in enumerate( joining_weights ):
             output += responses[joining_uids[index]].to( self.config.miner.device ) * joining_weight
 
         # ---- Punish peers with non-successful return ops ----
         with torch.no_grad():
-            self.chain_weights[topk_uids[(return_ops != 0)]] -=  self.config.nucleus.punishment
+            self.chain_weights[topk_uids[(return_ops != bittensor.proto.ReturnCode.Success)]] -=  self.config.nucleus.punishment
             self.chain_weights[self.chain_weights < -1] = -1 #lower bound for chain weights
-        # ---- Return response ----- 
+        
+        # ---- Return response -----
         return output
 
 class Miner:
@@ -221,14 +257,14 @@ class Miner:
         """
         if config == None: config = Miner.config()
         self.config = config; Miner.check_config( self.config ); print ( self.config )
-        
+
         # Miner training device.
         self.device = torch.device(
             device = self.config.miner.device
         )
 
         # Dataset of text.
-        self.dataset = bittensor.dataloader (
+        self.dataset = bittensor.dataset (
             config = self.config
         )
 
@@ -238,25 +274,46 @@ class Miner:
         ).to( self.device )
 
         # Torch optimizer.
+        # the chain_weights layer has it own learning weight, other layers follow the default
         self.optimizer = torch.optim.SGD(
-            [ {"params": self.nucleus.parameters()}],
+            [ {'params': self.nucleus.chain_weights, 'lr': self.config.miner.learning_rate_chain} ],
             lr = self.config.miner.learning_rate,
             momentum = self.config.miner.momentum,
         )
 
         #Torch scheduler
         self.scheduler= torch.optim.lr_scheduler.StepLR(self.optimizer,
-            step_size= 100.0,
-            gamma=0.9
+            step_size= 1.0,
+            gamma=0.95
         )
 
         # Bittensor backend
         self.neuron = bittensor.init (
             config = self.config,
             root_dir = self.config.miner.full_path,
-            axon_forward_callback = self.forward,
-            axon_backward_callback = self.backward,
+            forward_text = self.forward_text,
+            backward_text = self.backward_text,
+            blacklist = self.blacklist
         ) 
+
+        #bittensor priority thread pool 
+        self.thread_pool = bittensor.prioritythreadpool(
+            config = self.config
+        )
+
+        # ---- Init of when was the block that we sync to 
+        self.last_sync_block = 0
+        # ---- Store all the stats
+        self.stats = SimpleNamespace(
+            global_step = 0,
+            epoch_data_size = 0,
+            epoch_sync_count = 0,
+            local_target_epoch_loss = math.inf,
+            distillation_epoch_loss = math.inf,
+            remote_target_epoch_loss = math.inf,
+            local_epoch_acc = 0,
+            best_epoch_loss = math.inf,
+        )
 
     @staticmethod
     def config() -> 'bittensor.Config':
@@ -264,8 +321,9 @@ class Miner:
         """
         # ---- Add miner args.
         parser = argparse.ArgumentParser()
-        parser.add_argument('--miner.config', type=str, help='If set, defaults are overridden by passed file.')
+        parser.add_argument('--config', type=str, help='If set, defaults are overridden by passed file.')
         parser.add_argument('--miner.learning_rate', type=float, help='Training initial learning rate.', default=1)
+        parser.add_argument('--miner.learning_rate_chain', type=float, help='Training initial learning rate.', default=1)
         parser.add_argument('--miner.weight_decay', type=float, help='nucleus parameter weight decay.', default=0.25)
         parser.add_argument('--miner.momentum', type=float, help='optimizer momentum.', default=0.8)
         parser.add_argument('--miner.clip_gradients', type=float, help='Implement gradient clipping to avoid exploding loss on smaller architectures.', default=1.0)
@@ -276,23 +334,15 @@ class Miner:
         parser.add_argument('--miner.compute_remote_gradients', action='store_true', help='''Does the miner compute and return gradients from backward queries.''', default=False)
         parser.add_argument('--miner.accumulate_remote_gradients', action='store_true', help='''Does the miner accumulate remote gradients from backward queries.''', default=False)
         parser.add_argument('--miner.n_topk_chain_weights', type=int, help='Maximum number of weights to submit to chain', default=100 )
-        parser.add_argument('--miner.name', type=str, help='Trials for this miner go in miner.root / (wallet_cold - wallet_hot) / miner.name ', default='template miner')
+        parser.add_argument('--miner.name', type=str, help='Trials for this miner go in miner.root / (wallet_cold - wallet_hot) / miner.name ', default='template_miner')
         parser.add_argument('--miner.device', type=str, help='miner default training device cpu/cuda', default=("cuda" if torch.cuda.is_available() else "cpu"))
-
+        parser.add_argument('--miner.timeout', type=int, help='Number of seconds to wait for axon request', default=10)
+        parser.add_argument('--miner.blacklist', type=float, help='Amount of stake (tao) in order not to get blacklisted', default=0)
+        parser.add_argument('--miner.restart', type=bool, help='If True, train the miner from the beginning', default=False)
+        
         bittensor.add_args( parser )
-        Nucleus.add_args( parser )  
-
-        # ---- Loads config_file and updates defaults
-        config_file_path = vars(parser.parse_known_args()[0])['miner.config']
-        if config_file_path:
-            config_file_path = os.path.expanduser(config_file_path)
-            try:
-                with open(config_file_path) as f:
-                    params_config = yaml.safe_load(f) 
-                    print('Config File Detected at {} updating defaults'.format(config_file_path))
-                    parser.set_defaults(**params_config)
-            except Exception as e:
-                print('Error in loading: {} using default parser settings'.format(e))
+        Nucleus.add_args( parser ) 
+        bittensor.prioritythreadpool.add_args( parser )
 
         return bittensor.config( parser )
 
@@ -314,26 +364,95 @@ class Miner:
         # ---- Build Bittensor neuron ----
         with self.neuron:
             if self.config.neuron.use_wandb:
-                bittensor.neuron.wandb.watch([self.nucleus.local_hidden, self.nucleus.local_encoder, self.nucleus.remote_hidden], self.nucleus.loss_fct, log ='all', log_freq=10 )
-            
+                bittensor.wandb(
+                    config = self.config,
+                    cold_pubkey = self.neuron.wallet.coldkeypub.ss58_address,
+                    hot_pubkey = self.neuron.wallet.hotkey.ss58_address,
+                    root_dir = self.neuron.root_dir
+                )
+
             # ---- Init run state ----
-            self.epoch = 0
-            self.global_step = 0
-            self.epoch_loss = math.inf/2
-            self.best_epoch_loss = math.inf
-            
-            # ---- reloads previous run ----
+            self.epoch = 0            
+
+            # ---- reloads previous run if not restart ----
+            if self.config.miner.restart:
+                self.save()
+
             try:
                 self.reload()
-            except:
+                self.neuron.axon.check()
+            except Exception as e:
+                logger.error("Error when trying to reload model: {}".format(e))
                 self.save()
                 self.reload()
-
+                self.neuron.axon.check()
+            
             # --- Run until n_epochs ----
             while self.epoch < self.config.miner.n_epochs:
                 try:
-                    # ---- Train state ----
-                    self.run_epoch()
+
+                    # --- Init epoch stat----
+                    self.stats.epoch_data_size = 0
+                    self.stats.epoch_sync_count = 0
+                    total_local_target_epoch_loss = 0
+                    total_distillation_epoch_loss = 0
+                    total_remote_target_epoch_loss = 0
+                    total_local_epoch_acc = 0
+                    batches_count = 0
+
+                    # ---- Run epoch ----
+                    start_block = self.neuron.subtensor.get_current_block() + 1
+                    end_block = start_block + self.config.miner.epoch_length
+                    block_steps = [ block_delta for block_delta in range(start_block, end_block)]
+                    progress_bar = qqdm( block_steps, total=len(block_steps), desc=format_str('white', f'Epoch:'))
+                    for block in progress_bar:
+                        
+                        # --- Iterate over batches until the end of the block.
+                        current_block = self.neuron.subtensor.get_current_block()
+                        while block >= current_block:
+                            
+                            # ---- Forward pass ----
+                            inputs = next( self.dataset )
+                            output = self.nucleus.remote_forward (
+                                inputs = inputs.to( self.device ),
+                                training = True,
+                            )
+                            
+                            # ---- Backward pass ----
+                            output.loss = output.local_target_loss + output.distillation_loss + output.remote_target_loss
+                            output.loss.backward() # Accumulates gradients on the nucleus.
+                            clip_grad_norm_(self.nucleus.parameters(), self.config.miner.clip_gradients)
+                            
+                            # ---- Apply and zero accumulated gradients.
+                            self.optimizer.step() 
+                            self.optimizer.zero_grad()
+                            current_block = self.neuron.subtensor.get_current_block()
+                            
+                            # ---- Aggrigate outputs and losses 
+                            total_local_target_epoch_loss += output.local_target_loss.item()
+                            total_distillation_epoch_loss += output.distillation_loss.item()
+                            total_remote_target_epoch_loss += output.remote_target_loss.item()
+                            total_local_epoch_acc += output.local_accuracy
+                            self.stats.epoch_data_size += inputs.nelement()
+                            batches_count += 1
+
+                        # ---- Update the epoch loss if it is the last iteration within epoch
+                        if block+1 == end_block :
+                            self.stats.local_target_epoch_loss = total_local_target_epoch_loss / batches_count
+                            self.stats.distillation_epoch_loss = total_distillation_epoch_loss / batches_count
+                            self.stats.remote_target_epoch_loss = total_remote_target_epoch_loss / batches_count
+                            self.stats.local_epoch_acc = total_local_epoch_acc / batches_count
+
+                        # ---- Block logs.
+                        self.logs (
+                            progress_bar,
+                            iteration = block-start_block,
+                            output = output,
+                        )
+                        self.stats.global_step += 1
+
+                    # ---- Update params ----
+                    self.epoch += 1
 
                     # ---- Set weights on chain ----
                     self.set_chain_weights()
@@ -354,80 +473,8 @@ class Miner:
                     else:
                         break
 
-    # --- Run Epoch ----
-    def run_epoch( self ):
-        r""" Runs a single training epoch pulled from the dataloader.
-        """
-        # --- Init Epoch ----
-        total_epoch_loss = 0.0
-        epoch_batches = self.dataset.dataloader( self.config.miner.epoch_length )
-        progress_bar = qqdm(enumerate(epoch_batches), total=len(epoch_batches), desc=format_str('blue', f'Epoch Progress'))
-        for iteration, (inputs) in progress_bar:
-
-            # ---- Forward / Backward ----
-            output = self.train ( batch = { 'inputs': inputs } )
-            total_epoch_loss += output.local_target_loss.item()
-
-            # ---- Logs ----
-            self.logs (
-                progress_bar,
-                iteration = iteration,
-                output = output,
-            )
-            self.global_step += 1
-
-        self.epoch_loss = total_epoch_loss / self.config.miner.epoch_length
-        self.epoch += 1
-
-    # ---- Training call ----
-    def train ( self, batch: dict ) -> SimpleNamespace:
-        r""" Runs a single training batch through the nucleus and applies a gradient update.
-            Args:
-                batch ( dict, `required`):
-                    training batch dictionary.
-            Returns:
-                output = SimpleNamespace (
-                    local_context (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_len, bittensor.__network_dim__)`, `required`):
-                        Representations produced by the nucleus's distillation-model prior to producing the hidden units.
-                    local_hidden (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_len, bittensor.__network_dim__)`, `required`):
-                        Hidden layer representations produced using the local_context.
-                    local_target (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_len, bittensor.__vocab_size__)`, `required`):
-                        GPT2 MLM target predictions produced using local_hidden.
-                    local_target_loss (:obj:`torch.FloatTensor` of shape :obj:`(1)`, `required`):
-                        GPT2 MLM loss computed from the local_target.
-                    remote_context (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_len, bittensor.__network_dim__)`, `required`):
-                        Representations returned from the nucleus.remote function after querying the network.
-                    remote_hidden (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_len, bittensor.__network_dim__)`, `required`):
-                        Hidden layer representations produced using the remote_context.
-                    remote_target (:obj:`torch.FloatTensor` of shape :obj:`(batch_size,  bittensor.__vocab_size__)`, `required`):
-                        GPT MLM Target predictions produced using remote_hidden.
-                    remote_target_loss (:obj:`torch.FloatTensor` of shape :obj:`(1)`, `required`):
-                        GPT2 MLM loss computed from the remote_target.
-                    distillation_loss (:obj:`torch.FloatTensor` of shape :obj:`(1)`, `required`):
-                        Distillation loss between local_context and remote_context.
-            )
-        """
-        # Zeros out gradients for next accummulation
-        self.optimizer.zero_grad() 
-
-        # ---- Forward pass ----
-        inputs = batch['inputs']
-        output = self.nucleus.remote_forward (
-            inputs = inputs.to( self.device ),
-            training = True,
-        )
-
-        # ---- Backward pass ----
-        output.loss = output.local_target_loss + output.distillation_loss + output.remote_target_loss
-        output.loss.backward() # Accumulates gradients on the nucleus.
-        clip_grad_norm_(self.nucleus.parameters(), self.config.miner.clip_gradients)
-        self.optimizer.step() # Applies accumulated gradients.
-
-        # ---- Update global loss ----
-        return output
-
     # ---- Axon Forward call ----
-    def forward ( self, pubkey:str, inputs_x: torch.FloatTensor, modality:int ) -> torch.FloatTensor:
+    def forward_text ( self, pubkey:str, inputs_x: torch.FloatTensor) -> torch.FloatTensor:
         r""" Subscribed to an axon servicing endpoint: processes forward messages from the wire.
             The arguments reflect an RPC request from another miner in the network, the response tensor
             should be the hidden units computed using the local context and with shape: [batch_size, sequence_len, __network_dim__].
@@ -437,21 +484,29 @@ class Miner:
                     The public key of the caller.
                 inputs_x ( :obj:`torch.Tensor`, `required`):
                     torch inputs to be forward processed.
-                modality ( bittensor.proto.Modality, `required`):
-                    modality of inputs e.g. bittensor.proto.Modality.TEXT.
 
             Returns:
                 outputs (:obj:`torch.FloatTensor`):
                     The nucleus's outputs as a torch tensor of shape [batch_size, sequence_len, __network_dim__]
         """
-        inputs_x = inputs_x.to( self.device )
-        output = self.nucleus.local_forward (
-            inputs = inputs_x
-        )
-        return output.local_hidden
+        def call(inputs):
+            inputs_x = inputs.to( self.device )
+            output = self.nucleus.local_forward (
+                inputs = inputs_x
+            )
+            return output.local_hidden
+
+        priority = self.neuron.metagraph.S[ self.neuron.metagraph.hotkeys.index(pubkey) ] / sys.getsizeof(inputs_x)
+        future = self.thread_pool.submit( call, inputs = inputs_x, priority = priority )
+        try:
+            return future.result(timeout = self.config.miner.timeout)
+        except concurrent.futures.TimeoutError :
+            raise TimeoutError('TimeOutError')
+        except Exception as e:
+            logger.error('Error found: {}, with message {}'.format(repr(e), e))
 
     # ---- Axon Backward call ----
-    def backward ( self, pubkey:str, inputs_x:torch.FloatTensor, grads_dy:torch.FloatTensor, modality:int ) -> torch.FloatTensor:
+    def backward_text ( self, pubkey:str, inputs_x:torch.FloatTensor, grads_dy:torch.FloatTensor ) -> torch.FloatTensor:
         r""" Subscribed to an axon servicing endpoint: Processes backward messages from the wire.
             Arguments reflect an RPC backward request from another miner in the network, the response tensor
             should be the gradients of the miner's nucleus w.r.t to the inputs_x and the passed output grads_dy.
@@ -463,58 +518,46 @@ class Miner:
                     torch inputs from previous forward call.
                 grads_dy ( :obj:`torch.Tensor`, `required`):
                     torch grads of forward output.
-                modality ( bittensor.proto.Modality, `required`):
-                    modality of inputs e.g. bittensor.proto.Modality.TEXT.
-
+                    
             Returns:
                 outputs (:obj:`torch.FloatTensor`, `optional`):
                     The gradients w.r.t to the inputs [batch_size, sequence_len, -1]
         """
-        if self.config.miner.compute_remote_gradients:
-            with torch.enable_grad():
-
-                # ---- Set up inputs for gradient computations.
-                inputs_x.requires_grad = True
-                inputs_x = inputs_x.to( self.device )
-                grads_dy = grads_dy.to( self.device )
-                outputs_y = self.nucleus.local_forward( inputs = inputs_x ).to( self.device )
-
-                # ---- The backward call will accumulate gradients on our parameters.
-                if self.config.miner.accumulate_remote_gradients:
+        if self.config.miner.accumulate_remote_gradients:
+            def call(input,grad):
+                with torch.enable_grad():
+                    # ---- Set up inputs for gradient computations.
+                    outputs_y = self.nucleus.local_forward( inputs = input ).local_context.to( self.device )
+                    # ---- The backward call will accumulate gradients on our parameters.
+                
                     torch.autograd.backward (
                         tensors = [outputs_y],
-                        grad_tensors = [grads_dy]
+                        grad_tensors = [grad]
                     )
-                    return inputs_x.grad if inputs_x.grad != None else None
+                    return inputs_x.grad if inputs_x.grad != None else None                    
 
-                # ---- The backward call will simply compute the gradients without accumulating them.
-                else:
-                    grads_dy = torch.autograd.grad (
-                        outputs = outputs_y,
-                        inputs = inputs_x,
-                        grad_outputs = grads_dy,
-                        only_inputs = True,
-                        create_graph = False,
-                        retain_graph = False
-                    )[0]
-                    return grads_dy
-
-        # if ! compute_remote_gradients, NO-OP.
-        else:
-            return None
+            priority = self.neuron.metagraph.S[ self.neuron.metagraph.hotkeys.index(pubkey) ] / sys.getsizeof(inputs_x)
+            try:
+                self.thread_pool.submit(call, input=inputs_x.to( self.device ), grad=grads_dy.to( self.device ), priority=priority)
+            except concurrent.futures.TimeoutError :
+                raise TimeoutError('TimeOutError')
+            except Exception as e:
+                logger.error('Error found: {}'.format(e))
 
     def checkpoint( self ):
         r""" Optionally Saves, updates and then reloads the miner training state.
         """
         last_saved = self.get_saved_state()
-        if last_saved == None or last_saved['epoch_loss'] >= self.epoch_loss:
+        if last_saved == None or last_saved['epoch_loss'] >= self.stats.local_target_epoch_loss:
+            self.stats.best_epoch_loss = self.stats.local_target_epoch_loss
             self.save()
-        bittensor.neuron.metagraph.load()
-        bittensor.neuron.metagraph.sync()
-        bittensor.neuron.metagraph.save()
+        bittensor.neuron.metagraph.load().sync().save()
+
+        chain_growth = bittensor.neuron.metagraph.n.item()- self.nucleus.chain_weights.shape[0]
+        self.nucleus.chain_weights = nn.Parameter(torch.cat([self.nucleus.chain_weights, torch.ones([chain_growth],dtype=torch.float32,requires_grad=True)]))
 
         # Checks if epochs managed to diverage
-        if not math.isfinite(self.epoch_loss):
+        if not math.isfinite(self.stats.local_target_epoch_loss):
             logger.error('Incorrect epoch loss detected, reloading to previous saved state')
             self.reload()
 
@@ -534,37 +577,50 @@ class Miner:
         state_dict = self.get_saved_state()
 
         # --- loads and syncs metagraph
-        bittensor.neuron.metagraph.load()
-        bittensor.neuron.metagraph.sync()
-        bittensor.neuron.metagraph.save()
+        try:
+            bittensor.neuron.metagraph.load().sync().save()
+
+        except Exception as e:
+            logger.error('Error in loading metagraph: {}'.format(e))
+            bittensor.neuron.metagraph.sync().save()
 
         # ---- Load training state.
         self.epoch = state_dict['epoch']
-        self.epoch_loss = state_dict['epoch_loss']
-        self.global_step = state_dict['global_step']
+        self.stats.local_target_epoch_loss = state_dict['epoch_loss']
+        self.stats.global_step = state_dict['global_step']
         if 'network' in state_dict.keys() and bittensor.neuron.subtensor.network == state_dict['network']: # checks if you are loading into the same network
-            chain_growth = bittensor.neuron.metagraph.n.item()- state_dict['nucleus_state']['chain_weights'].shape[0]
+            chain_growth = bittensor.neuron.metagraph.n.item() - state_dict['nucleus_state']['chain_weights'].shape[0]
             #updates the shape of nucleus chain weights
             self.nucleus.chain_weights = nn.Parameter(
                 torch.ones(
                     list(state_dict['nucleus_state']['chain_weights'].shape),
                     requires_grad=True
                 )
-            ) 
+            )
         else:
             logger.exception('Incorrect Network setting between miner input and saved state. Please use the same network')
             raise Exception('Network does not match saved state')
 
-        self.nucleus.load_state_dict( state_dict['nucleus_state'], strict=False ) 
+        self.nucleus.load_state_dict( state_dict['nucleus_state'], strict=False )
         self.nucleus.chain_weights = nn.Parameter(torch.cat([self.nucleus.chain_weights, torch.ones([chain_growth],dtype=torch.float32,requires_grad=True)]))
         self.nucleus.to( self.device ) # Load nucleus
 
-        # --- Load optimizer.
-        self.optimizer = torch.optim.SGD(
-            [{"params": self.nucleus.parameters()}],
-            lr = state_dict['optimizer_state']['param_groups'][0]['lr'],
-            weight_decay = state_dict['optimizer_state']['param_groups'][0]['weight_decay'],
-        )
+        # --- Load optimizer
+        # check if the optimizer has previously stored separate param for the chain_weight 
+        if len(state_dict['optimizer_state']['param_groups']) == 1:
+            self.optimizer = torch.optim.SGD(
+                [{"params": self.nucleus.parameters()}],
+                lr = state_dict['optimizer_state']['param_groups'][0]['lr'],
+                momentum = state_dict['optimizer_state']['param_groups'][0]['momentum'],
+            )
+
+        else:
+            self.optimizer = torch.optim.SGD(
+                [ {'params': self.nucleus.chain_weights, 'lr': state_dict['optimizer_state']['param_groups'][0]['lr'] }],
+                lr = state_dict['optimizer_state']['param_groups'][1]['lr'],
+                momentum = state_dict['optimizer_state']['param_groups'][1]['momentum'],
+            )
+        
         bittensor.logging.success( prefix = 'Reloaded model', sufix = '<blue>{}/model.torch</blue>'.format( self.config.miner.full_path ))
 
     def save( self ):
@@ -573,13 +629,13 @@ class Miner:
         try:
             state_dict = {
                 'epoch': self.epoch,
-                'epoch_loss': self.epoch_loss,
-                'global_step': self.global_step,
+                'epoch_loss': self.stats.local_target_epoch_loss,
+                'global_step': self.stats.global_step,
                 'nucleus_state': self.nucleus.state_dict(), # Save nucleus state.
                 'optimizer_state': self.optimizer.state_dict(), # Save optimizer.
                 'network': bittensor.neuron.subtensor.network # Save Network
             }
-            torch.save( state_dict, "{}/model.torch".format( self.config.miner.full_path, self.epoch_loss ) )
+            torch.save( state_dict, "{}/model.torch".format( self.config.miner.full_path ) )
             bittensor.logging.success(prefix='Saved model', sufix='<blue>{}/model.torch</blue>'.format( self.config.miner.full_path ) )
         except Exception as e:
             logger.exception('Failed to save model with error:{}', e)
@@ -588,10 +644,11 @@ class Miner:
         r""" Sets the chain weights.
         """
         try:
-            real_topk = min( self.config.miner.n_topk_chain_weights , bittensor.neuron.metagraph.n.item() ) 
-            topk_weights, topk_uids = torch.topk( self.nucleus.chain_weights, k = real_topk )
+            real_topk = min( self.config.miner.n_topk_chain_weights , bittensor.neuron.metagraph.n.item() )
+            topk_weights, topk_uids = torch.topk( self.nucleus.chain_weights.detach(), k = real_topk )
             normalized_topk_weights = torch.nn.functional.normalize( topk_weights - torch.min( topk_weights ), p = 1, dim = 0)
-            did_set = bittensor.neuron.subtensor.set_weights(
+            did_set = bittensor.neuron.subtensor.timeout_set_weights(
+                timeout=10,
                 uids = topk_uids,
                 weights = normalized_topk_weights,
                 wait_for_inclusion = True,
@@ -601,8 +658,6 @@ class Miner:
                 bittensor.logging.success(prefix='Set weights:', sufix='{}'.format(self.nucleus.chain_weights.tolist()))
             else:
                 logger.warning('Failed to set weights on chain.')
-                bittensor.neuron.subtensor = bittensor.subtensor( config = self.config.subtensor )
-                bittensor.neuron.subtensor.connect()
 
         except Exception as e:
             logger.error('Failure setting weights on chain with error: {}', e)
@@ -611,16 +666,18 @@ class Miner:
     def logs( self, progress_bar, iteration:int, output: SimpleNamespace ):
         r""" Called after every training step. Displays miner state to screen.
         """
-        self_uid = bittensor.neuron.metagraph.hotkeys.index( ss58_encode(bittensor.neuron.wallet.hotkey.public_key) )
+        self_uid = bittensor.neuron.metagraph.hotkey_to_uid(bittensor.neuron.wallet.hotkey.ss58_address)
         stake = bittensor.neuron.metagraph.S[ self_uid ].item()
         rank = bittensor.neuron.metagraph.R[ self_uid ].item()
-        incentive = bittensor.neuron.metagraph.I[ self_uid ].item()
+        incentive = bittensor.neuron.metagraph.I[ self_uid ].item()     
+        normalized_chain_weights =  F.softmax (self.nucleus.chain_weights.detach())
+
+        # ---- Progress bar log
         info = {
-            'GS': colored('{}'.format(self.global_step), 'red'),
+            'GS': colored('{}'.format(self.stats.global_step), 'red'),
             'LS': colored('{}'.format(iteration), 'blue'),
             'Epoch': colored('{}'.format(self.epoch+1), 'green'),
-            'Loss': colored('{:.4f}'.format(self.epoch_loss), 'yellow'),
-            'Best': colored('{:.4f}'.format(self.best_epoch_loss), 'red'),
+            'Best': colored('{:.4f}'.format(self.stats.best_epoch_loss), 'red'),            
             'L-loss': colored('{:.4f}'.format(output.local_target_loss.item()), 'blue'),
             'R-loss': colored('{:.4f}'.format(output.remote_target_loss.item()), 'green'),
             'D-loss': colored('{:.4f}'.format(output.distillation_loss.item()), 'yellow'),
@@ -630,40 +687,60 @@ class Miner:
             'Incentive(\u03C4/block)': colored('{:.6f}'.format(incentive), 'yellow'),
             'L-accuracy': colored('{}'.format(output.local_accuracy), 'red'),
         }
-        if self.config.neuron.use_wandb:
+        # ---- Miner summary per peer for progress bar
+        for uid in bittensor.neuron.metagraph.uids.tolist():
+            if normalized_chain_weights[uid].item() > 0:
+                if self.nucleus.chain_weights.grad != None:
+                    weight_diff = -self.nucleus.chain_weights.grad[uid].item()
+                else:
+                    weight_diff = 0
+
+                color = ('green' if weight_diff > 0 else ('white' if weight_diff == 0 else 'red'))
+                info[str(uid)] = colored('{:.4f}'.format(normalized_chain_weights[uid]), color)
+
+        progress_bar.set_infos( info )
+
+        # ---- wandb log if it is the end of epoch 
+        if  self.config.neuron.use_wandb and ((iteration + 1) % (self.config.miner.epoch_length ) == 0):
+            # ---- Miner summary for wandb
             wandb_info = {
-                'remote_target_loss':output.remote_target_loss.item(),
-                'distillation_loss':output.distillation_loss.item(), 
-                "local_target_loss": output.local_target_loss.item(),
-                'Number of Peers':bittensor.neuron.metagraph.n.item(),
-                'Stake':stake,
-                'Rank':rank,
-                'Incentive':incentive,
-                'Axon QPS':bittensor.neuron.axon.stats.qps.value,
-                'local_accuracy':output.local_accuracy
+                'stake':stake,
+                'rank':rank,
+                'incentive':incentive,
+                'num_peers':bittensor.neuron.metagraph.n.item(),
+                'remote_target_epoch_loss': self.stats.remote_target_epoch_loss,
+                'distillation_epoch_loss': self.stats.distillation_epoch_loss,
+                'local_target_epoch_loss': self.stats.local_target_epoch_loss,
+                'local_epoch_acc': self.stats.local_epoch_acc,
+                'num_sync_metagraph': self.stats.epoch_sync_count,
+                'data_size': self.stats.epoch_data_size,
                 }
 
-        #removing normalization of chain weights for display
-        normalized_chain_weights = self.nucleus.chain_weights
-        for uid in bittensor.neuron.metagraph.uids.tolist():
-            if self.nucleus.chain_weights[uid] != 0:
-                weight_dif = -self.nucleus.chain_weights.grad[uid]
-                if weight_dif > 0:
-                    info[colored(str(uid), 'green')] = colored('{:.4f}'.format(normalized_chain_weights[uid]), 'green')
-                elif weight_dif == 0:
-                    info[str(uid)] = colored('{:.4f}'.format(normalized_chain_weights[uid]), 'white')
-                else:
-                    info[colored(str(uid), 'red')] = colored('{:.4f}'.format(normalized_chain_weights[uid]), 'red')
-                if self.config.neuron.use_wandb:
-                    wandb_info['Chain weights:' + str(uid)]= normalized_chain_weights[uid]
+            # ---- Miner summary per peer for wandb
+            for uid in bittensor.neuron.metagraph.uids.tolist():
+                uid_str = str(uid).zfill(3)
+                wandb_info[f'peers_norm_weight uid: {uid_str}']= normalized_chain_weights[uid]
+                wandb_info[f'peers_wo_norm_weight uid: {uid_str}']= self.nucleus.chain_weights[uid]
 
-        if self.config.neuron.use_wandb:
+            wandb_info_axon = bittensor.neuron.axon.to_wandb()
+            wandb_info_dend = bittensor.neuron.dendrite.to_wandb()
+                
             try:
-                bittensor.neuron.wandb.log(wandb_info)
+                wandb.log({**wandb_info, **wandb_info_axon, **wandb_info_dend})
+
             except Exception as e:
                 logger.warning('Failed to update weights and biases with error:{}', e)
 
-        progress_bar.set_infos( info )
+
+    def blacklist(self,pubkey:str) -> bool:
+        r"""Axon security blacklisting, used to blacklist message from low stake members
+        Currently, this is not turned on.
+        """
+        uid =self.neuron.metagraph.hotkeys.index(pubkey)
+        if self.neuron.metagraph.S[uid].item() < self.config.miner.blacklist:
+            return True
+        else:
+            return False
 
 if __name__ == "__main__":
     Miner().run()
