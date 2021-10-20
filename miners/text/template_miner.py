@@ -102,7 +102,7 @@ class Nucleus(nn.Module):
         parser.add_argument('--nucleus.nlayers', type=int, help='the number of nn.TransformerEncoderLayer in nn.TransformerEncoder', default=2)
         parser.add_argument('--nucleus.dropout', type=float, help='the dropout value', default=0.2)
         parser.add_argument('--nucleus.topk', type=int, help='the number of peers queried during each remote forward call', default=20)
-        parser.add_argument('--nucleus.punishment', type=float, help='The punishment on the chain weights that do not respond ', default=0.001 )
+        parser.add_argument('--nucleus.punishment', type=float, help='The punishment on the peer weights that do not respond ', default=0.001 )
 
     def init_weights(self):
         initrange = 0.1
@@ -719,8 +719,8 @@ class Miner:
         # ---- Miner summary per peer for progress bar
         for uid in bittensor.neuron.metagraph.uids.tolist():
             if normalized_peer_weights[uid].item() > 0:
-                if self.nucleus.chain_weights.grad != None:
-                    weight_diff = -self.nucleus.chain_weights.grad[uid].item()
+                if self.nucleus.peer_weights.grad != None:
+                    weight_diff = -self.nucleus.peer_weights.grad[uid].item()
                 else:
                     weight_diff = 0
 
