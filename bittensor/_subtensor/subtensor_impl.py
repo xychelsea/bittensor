@@ -449,7 +449,7 @@ To run a local node (See: docs/running_a_validator.md) \n
                 block_hash = None if block == None else substrate.get_block_hash( block )
             )
             result = []
-            for page in tqdm( page_results ):
+            for page in page_results:
                 for n in page:
                     if type(n.value) != int:
                         n = Subtensor._neuron_dict_to_namespace( n.value )
