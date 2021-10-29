@@ -44,10 +44,9 @@ class metagraph:
                     bittensor.metagraph.config()
                 subtensor (:obj:`bittensor.Subtensor`, `optional`): 
                     bittensor subtensor chain connection.
-                network (default='nakamoto', type=str)
+                network (default='kusanagi', type=str)
                     The subtensor network flag. The likely choices are:
-                            -- nobunaga (staging network)
-                            -- akatsuki (testing network)
+                            -- kusanagi (testing network)
                             -- akatsuki (main network)
                     If this option is set it overloads subtensor.chain_endpoint with 
                     an entry point node from that network.

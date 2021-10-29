@@ -38,7 +38,7 @@ __network_dim__ = 1024 # All network responses have shape = [ __batch_size__, __
 # Substrate chain block time (seconds).
 __blocktime__ = 10
 
-__networks__ = [ 'local', 'nobunaga', 'akatsuki', 'nakamoto']
+__networks__ = ['nakamoto', 'akatsuki', 'nobunaga']
 
 __nakamoto_entrypoints__ = [
     "main.nakamoto.opentensor.ai:9944"
@@ -112,6 +112,7 @@ subtensor.add_defaults( defaults )
 dendrite.add_defaults( defaults )
 axon.add_defaults( defaults )
 wallet.add_defaults( defaults )
+prioritythreadpool.add_defaults( defaults )
 dataset.add_defaults( defaults )
 wandb.add_defaults( defaults )
 logging.add_defaults( defaults )
