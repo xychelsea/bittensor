@@ -701,7 +701,7 @@ class Miner:
             did_set = self.subtensor.timeout_set_weights(
                 timeout=10,
                 uids = topk_uids,
-                weights = topk_scores,
+                weights = topk_scores.detach().to(torch.device('cpu')),
                 wait_for_inclusion = True,
                 wallet = self.wallet,
             )
