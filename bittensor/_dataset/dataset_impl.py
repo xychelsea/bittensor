@@ -368,7 +368,9 @@ class GenesisTextDataset( Dataset ):
         Returns:
             int: length of dataset minus block size
         """
-        return len(self.data) - self.block_size
+        if self.data == None:
+            return 0
+        return max(len(self.data) - self.block_size, 0)
 
     def __getitem__(self, idx):
         """ Returns a batch of sentences from text dataset.
