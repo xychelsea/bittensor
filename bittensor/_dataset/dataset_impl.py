@@ -273,7 +273,11 @@ class GenesisTextDataset( Dataset ):
                     file_name = random_dataset_file['Name']
                     random_dataset_file_hash = random_dataset_file['Cid']['/']
                     
-                    text = self.get_text(random_dataset_file_hash, file_name)
+                    try:
+                        text = self.get_text(random_dataset_file_hash, file_name)
+                    except: 
+                        text = None
+                        
                     if text != None:
                         data_corpus.extend(text.split())
                         total_dataset_size += int(random_dataset_file['Size'])
