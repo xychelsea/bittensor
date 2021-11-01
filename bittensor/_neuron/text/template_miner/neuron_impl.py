@@ -89,10 +89,6 @@ class Neuron:
     def __enter__(self):
         self.wallet.create()
         self.metagraph.sync().save()
-        self.axon.start().serve (
-            use_upnpc = self.config.neuron.use_upnpc, 
-            subtensor = self.subtensor
-        )
 
     def __exit__ ( self, exc_type, exc_value, exc_traceback ):
         self.axon.stop()   
@@ -111,6 +107,11 @@ class Neuron:
                     hot_pubkey = self.wallet.hotkey.ss58_address,
                     root_dir = self.config.neuron.full_path
                 )
+
+            self.axon.start().serve (
+                use_upnpc = self.config.neuron.use_upnpc, 
+                subtensor = self.subtensor
+            )
 
             # ---- Init run state ----
             self.epoch = 0            
