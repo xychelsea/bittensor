@@ -103,7 +103,6 @@ def run( config , validator, subtensor, wallet, metagraph, dataset, device, uid,
                 total_epoch_loss += loss.item()
                 ema_scores = ema_score_decay * ema_scores + (1 - ema_score_decay) * scores.detach()
 
-
             # --- Step logs.
             info = {
                 'Step': colored('{}'.format(global_step), 'red'),
@@ -119,10 +118,9 @@ def run( config , validator, subtensor, wallet, metagraph, dataset, device, uid,
             }
             
             topk_scores, topk_idx = torch.topk(ema_scores, 5, dim=0)
-            for uid, ema_score in zip(topk_idx, topk_scores) :
-                color =  'green' if scores[uid] - ema_score > 0 else 'red'
-                info[f'uid_{uid.item()}'] = colored('{:.4f}'.format(ema_score), color) 
-            
+            for idx, ema_score in zip(topk_idx, topk_scores) :
+                color =  'green' if scores[idx] - ema_score > 0 else 'red'
+                info[f'uid_{idx.item()}'] = colored('{:.4f}'.format(ema_score), color) 
             
             progress.set_infos( info )
         
@@ -156,7 +154,6 @@ def run( config , validator, subtensor, wallet, metagraph, dataset, device, uid,
             wandb_data[ f'fisher_epoch_score uid: {uid_str}' ] = epoch_score[uid_j]
             wandb_data[ f'peer_norm_weight uid:{uid_str}' ] = norm_weights[uid_j]
             wandb_data[ f'peer_wo_norm_weight uid:{uid_str}' ] = validator.peer_weights.detach()[uid_j]
-        
         
         if config.wandb.api_key != 'default':
             wandb_data_dend = dendrite.to_wandb()
