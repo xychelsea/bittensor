@@ -661,7 +661,8 @@ To run a local node (See: docs/running_a_validator.md) \n
         if response.is_success:
             with bittensor.__console__.status(":satellite: Checking Balance on: ([white]{}[/white] ...".format(self.network)):
                 new_balance = self.get_balance( wallet.coldkey.ss58_address )
-                new_stake = bittensor.Balance.from_tao( self.neuron_for_uid( uid = neuron.uid, ss58_hotkey = wallet.hotkey.ss58_address ).stake)
+                block = self.get_current_block()
+                new_stake = bittensor.Balance.from_tao( self.neuron_for_uid( uid = neuron.uid, block = block ).stake)
                 bittensor.__console__.print("Balance: [blue]{}[/blue] :arrow_right: [green]{}[/green]".format( old_balance, new_balance ))
                 bittensor.__console__.print("Stake: [blue]{}[/blue] :arrow_right: [green]{}[/green]".format( stake_on_uid, new_stake ))
                 return True
@@ -858,7 +859,12 @@ To run a local node (See: docs/running_a_validator.md) \n
         """
         # Make the call.
         with self.substrate as substrate:
-            neuron = dict( substrate.query( module='SubtensorModule',  storage_function='Neurons', params = [ uid ], block_hash = substrate.get_block_hash( block )).value )
+            neuron = dict( substrate.query( 
+                module='SubtensorModule',  
+                storage_function='Neurons', 
+                params = [ uid ], 
+                block_hash = None if block == None else substrate.get_block_hash( block )
+            ).value )
         neuron = Subtensor._neuron_dict_to_namespace( neuron )
         return neuron
 
