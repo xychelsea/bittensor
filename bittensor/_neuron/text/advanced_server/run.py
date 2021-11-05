@@ -244,15 +244,17 @@ def serve( config, server):
 
             if config.wandb.api_key != 'default':
                 wandb.log( wandb_data )
-            bittensor.__console__.print('[green]Current Status:[/green]', wandb_data)
+            
 
             # save the model
             gp_server.save(config.server.full_path)
             
-            if current_block % 10 == 0:
+            if current_block % 100 == 0:
                 
                 # --- setting weights
                 try: 
+                    bittensor.__console__.print('[green]Current Status:[/green]', wandb_data)
+
                     did_set = subtensor.timeout_set_weights(
                         timeout=12,
                         uids=metagraph.uids,

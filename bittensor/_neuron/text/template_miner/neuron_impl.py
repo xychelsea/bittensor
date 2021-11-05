@@ -91,10 +91,6 @@ class Neuron:
     def __enter__(self):
         self.wallet.create()
         self.subtensor.register( self.wallet )
-        self.axon.start().serve (
-            use_upnpc = self.config.neuron.use_upnpc, 
-            subtensor = self.subtensor
-        )
 
     def __exit__ ( self, exc_type, exc_value, exc_traceback ):
         self.axon.stop()   
@@ -119,12 +115,12 @@ class Neuron:
 
             try:
                 self.reload()
-                self.axon.check()
+
             except Exception as e:
                 logger.error("Error when trying to reload model: {}".format(e))
                 self.save()
                 self.reload()
-                self.axon.check()
+
             
             # ---- Init run state ----
             self.epoch = 0            
