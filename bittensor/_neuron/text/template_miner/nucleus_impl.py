@@ -227,9 +227,18 @@ class Nucleus(nn.Module):
         # remote_context.shape = [sequence_len, batch_size, bittensor.__network_dim__]
         remote_context = output.remote_context.transpose(0, 1)
 
+        # inputs.shape = [batch_size, sequence_len]
+        sequence_len = inputs.shape[1]
+
+        # src_mask: attention mask adds -inf to positions not allowed to attend, preventing forward-looking when
+        #           predicting each next token in the sequence.
+        # src_mask.shape = [sequence_len, sequence_len]
+        src_mask = torch.triu(torch.ones(sequence_len, sequence_len) * float('-inf'), diagonal=1)
+        src_mask = src_mask.to(self.config.neuron.device)
+
         # remote_hidden: projects from the remote_context
         # remote_hidden.shape = [sequence_len, batch_size, bittensor.__network_dim__]
-        remote_hidden = self.remote_hidden(remote_context)
+        remote_hidden = self.remote_hidden(remote_context, mask=src_mask)
 
         # external expects output.remote_hidden.shape = [batch_size, sequence_len, bittensor.__network_dim__]
         output.remote_hidden = remote_hidden.transpose(0, 1)
