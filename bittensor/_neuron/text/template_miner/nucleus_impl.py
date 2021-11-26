@@ -199,6 +199,8 @@ class Nucleus(nn.Module):
             self.local_forward() + SimpleNamespace (
                 remote_context (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_len, bittensor.__network_dim__)`, `required`):
                     Joined responses from the network.
+                remote_hidden (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_len, bittensor.__network_dim__)`, `required`):
+                    Transformer encoding of remote_context.
                 remote_target (:obj:`torch.FloatTensor` of shape :obj:`(batch_size,  bittensor.__vocab_size__)`, `optional`):
                     Target predictions using the remote_context layer.
                 remote_target_loss (:obj:`torch.FloatTensor` of shape :obj:`(1)`, `optional`):
