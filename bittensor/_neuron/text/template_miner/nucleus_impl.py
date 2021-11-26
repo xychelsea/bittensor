@@ -187,11 +187,12 @@ class Nucleus(nn.Module):
             output.local_accuracy = (predictions == shift_labels).sum().item() / predictions.nelement()
         return output
 
-    def remote_forward(self, inputs: torch.int64, training: bool) -> SimpleNamespace:
+    def remote_forward(self, inputs: torch.LongTensor, training: bool) -> SimpleNamespace:
         """ Forward pass inputs and labels through the GPT2 module and into the remote network.
         Args:
-            inputs (:obj:`torch.int64` of shape :obj:`(batch_size, sequence_len)`, `required`):
-                Tokenized sentences using bittensor.tokenizer()
+            inputs (:obj:`torch.LongTensor` of shape :obj:`(batch_size, sequence_len)`, `required`):
+                Input batch of batch_size token sequences each of length sequence_len, where
+                each token is :obj:`torch.int64` in range [0, bittensor.__vocab_size__ - 1]
             training (:obj:`bool')`, `optional`, defaults to True):
                 Switch to True if this forward pass computes an MLM loss.
         Returns:
