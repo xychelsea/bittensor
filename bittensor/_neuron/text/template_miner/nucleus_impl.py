@@ -110,7 +110,7 @@ class Nucleus(nn.Module):
                 inputs (:obj:`torch.LongTensor` of shape :obj:`(batch_size, sequence_len)`, `required`):
                     Input batch of batch_size token sequences each of length sequence_len, where
                     each token is :obj:`torch.int64` in range [0, bittensor.__vocab_size__ - 1]
-                training (:obj:`bool')`, `optional`, defaults to True):
+                training (:obj:`bool`), `optional`, defaults to True):
                     Switch to True if this forward pass computes a CLM loss.
 
             Returns:
@@ -188,26 +188,27 @@ class Nucleus(nn.Module):
         return output
 
     def remote_forward(self, inputs: torch.LongTensor, training: bool) -> SimpleNamespace:
-        """ Forward pass inputs and labels through the GPT2 module and into the remote network.
+        """ Forward pass inputs through the remote network and local transformer model, and produce distillation and
+            next token prediction losses.
         Args:
             inputs (:obj:`torch.LongTensor` of shape :obj:`(batch_size, sequence_len)`, `required`):
                 Input batch of batch_size token sequences each of length sequence_len, where
                 each token is :obj:`torch.int64` in range [0, bittensor.__vocab_size__ - 1]
-            training (:obj:`bool')`, `optional`, defaults to True):
+            training (:obj:`bool`), `optional`, defaults to True):
                 Switch to True if this forward pass computes an MLM loss.
         Returns:
-            self.local_forward() + SimpleNamespace (
+            self.local_forward() + SimpleNamespace {
                 remote_context (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_len, bittensor.__network_dim__)`, `required`):
                     Joined responses from the network.
                 remote_hidden (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_len, bittensor.__network_dim__)`, `required`):
                     Transformer encoding of remote_context.
+                distillation_loss (:obj:`torch.FloatTensor` of shape :obj:`(1)`, `required`):
+                    Distillation loss between local_context and remote_hidden.
                 remote_target (:obj:`torch.FloatTensor` of shape :obj:`(batch_size,  bittensor.__vocab_size__)`, `optional`):
-                    Target predictions using the remote_context layer.
+                    Target predictions using the remote_hidden layer.
                 remote_target_loss (:obj:`torch.FloatTensor` of shape :obj:`(1)`, `optional`):
-                    MLM loss using remote_target.
-                distillation_loss (:obj:`torch.FloatTensor` of shape :obj:`(1)`, `optional`):
-                    Distillation loss between local_context and remote_context.
-            )
+                    Next token prediction loss using remote_target.
+            }
         """
         # Run local model
         output = self.local_forward(inputs, training)
