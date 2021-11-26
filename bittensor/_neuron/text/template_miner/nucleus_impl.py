@@ -214,12 +214,23 @@ class Nucleus(nn.Module):
         output = self.local_forward(inputs, training)
 
         # remote_context: joined responses from a dendrite.forward_text call.
-        # remote_context.shape = [batch_size, sequence_len (or block_size), bittensor.__network_dim__]
+        # output.remote_context.shape = [batch_size, sequence_len (or block_size), bittensor.__network_dim__]
         output.remote_context = self.remote(inputs)
 
+        # https://pytorch.org/docs/1.8.1/generated/torch.nn.Transformer.html#torch.nn.Transformer.forward
+        # src: (S, N, E) the sequence to the encoder (required).
+        # src_mask: (S, S) the mask for the src sequence (optional).
+        # where S is the source sequence length, N is the batch size, E is the feature number
+
+        # remote_context.shape = [sequence_len, batch_size, bittensor.__network_dim__]
+        remote_context = output.remote_context.transpose(0, 1)
+
         # remote_hidden: projects from the remote_context
-        # remote_hidden.shape = [batch_size, sequence_len, bittensor.__vocab_size__]
-        output.remote_hidden = self.remote_hidden(output.remote_context)
+        # remote_hidden.shape = [sequence_len, batch_size, bittensor.__network_dim__]
+        remote_hidden = self.remote_hidden(remote_context)
+
+        # external expects output.remote_hidden.shape = [batch_size, sequence_len, bittensor.__network_dim__]
+        output.remote_hidden = remote_hidden.transpose(0, 1)
 
         # distillation_loss : distillation loss between local_context and remote_context
         # distillation_loss.shape = [1]
@@ -228,8 +239,11 @@ class Nucleus(nn.Module):
 
         if training:
             # remote_target: projection of remote_hidden onto target dimension.
-            # remote_target.shape = [batch_size, sequence_len, bittensor.__vocab_size__]
-            output.remote_target = self.remote_decoder(output.remote_hidden)
+            # remote_target.shape = [sequence_len, batch_size, bittensor.__vocab_size__]
+            remote_target = self.remote_decoder(remote_hidden)
+
+            # external expects output.remote_target.shape = [batch_size, sequence_len, bittensor.__vocab_size__]
+            output.remote_target = remote_target.transpose(0, 1)
 
             # remote_target_loss: MLM loss between remote_target and passed targets.
             # remote_target_loss.shape = [1]
