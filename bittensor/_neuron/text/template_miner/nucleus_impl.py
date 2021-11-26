@@ -150,7 +150,7 @@ class Nucleus(nn.Module):
         embedding = self.embedding(inputs)
 
         # embedding.shape = [batch_size, sequence_len, bittensor.__network_dim__]
-        # local_encoder expects input shape = [sequence_len, batch_size, bittensor.__network_dim__]
+        # local_encoder expects embedding.shape = [sequence_len, batch_size, bittensor.__network_dim__]
         embedding = embedding.transpose(0, 1)
 
         # local_context: hidden layer encoding of sequence with local_context.
@@ -161,7 +161,7 @@ class Nucleus(nn.Module):
         # local_context.shape = [sequence_len, batch_size, bittensor.__network_dim__]
         local_context = self.local_pos_encoder(local_context)
 
-        # external expects output.local_context shape = [batch_size, sequence_len, bittensor.__network_dim__]
+        # external expects output.local_context.shape = [batch_size, sequence_len, bittensor.__network_dim__]
         output.local_context = local_context.transpose(0, 1)
 
         if training:
@@ -169,12 +169,14 @@ class Nucleus(nn.Module):
             # local_hidden.shape = [sequence_len, batch_size, bittensor.__vocab_size__]
             local_hidden = self.local_hidden(local_context.detach(), mask=src_mask)
 
+            # external expects output.local_hidden.shape = [batch_size, sequence_len, bittensor.__network_dim__]
+            output.local_hidden = local_hidden.transpose(0, 1)
+
             # local_target: projection of local_hidden onto target dimension.
             # local_target.shape = [sequence_len, batch_size, bittensor.__vocab_size__]
             local_target = self.local_decoder(local_hidden)
 
-            # external expects output shape = [batch_size, sequence_len, bittensor.__network_dim__]
-            output.local_hidden = local_hidden.transpose(0, 1)
+            # external expects output.local_target.shape = [batch_size, sequence_len, bittensor.__vocab_size__]
             output.local_target = local_target.transpose(0, 1)
 
             # local_target_loss: MLM loss between local_target and passed targets.
