@@ -207,32 +207,32 @@ class Nucleus(nn.Module):
             )
         """
         # Run local model
-        output = self.local_forward( inputs, training )
+        output = self.local_forward(inputs, training)
 
         # remote_context: joined responses from a dendrite.forward_text call.
         # remote_context.shape = [batch_size, sequence_len (or block_size), bittensor.__network_dim__]
-        output.remote_context = self.remote( inputs )
+        output.remote_context = self.remote(inputs)
 
         # remote_hidden: projects from the remote_context
         # remote_hidden.shape = [batch_size, sequence_len, bittensor.__vocab_size__]
-        output.remote_hidden = self.remote_hidden( output.remote_context )
+        output.remote_hidden = self.remote_hidden(output.remote_context)
 
         # distillation_loss : distillation loss between local_context and remote_context
         # distillation_loss.shape = [1]
         # This trains the local_context (student) to emulate the network context.
-        output.distillation_loss = F.mse_loss( output.local_context, output.remote_hidden.detach() )
+        output.distillation_loss = F.mse_loss(output.local_context, output.remote_hidden.detach())
 
-        if training :
+        if training:
             # remote_target: projection of remote_hidden onto target dimension.
             # remote_target.shape = [batch_size, sequence_len, bittensor.__vocab_size__]
-            output.remote_target = self.remote_decoder( output.remote_hidden )
+            output.remote_target = self.remote_decoder(output.remote_hidden)
 
             # remote_target_loss: MLM loss between remote_target and passed targets.
             # remote_target_loss.shape = [1]
             shift_logits = output.remote_target[..., :-1, :].contiguous()
 
             shift_labels = inputs[..., 1:].contiguous()
-            output.remote_target_loss = self.loss_fct( shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1) )
+            output.remote_target_loss = self.loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
 
         return output
 
