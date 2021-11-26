@@ -247,7 +247,7 @@ class Nucleus(nn.Module):
             # external expects output.remote_target.shape = [batch_size, sequence_len, bittensor.__vocab_size__]
             output.remote_target = remote_target.transpose(0, 1)
 
-            # remote_target_loss: MLM loss between remote_target and passed targets.
+            # remote_target_loss: next token prediction loss between remote_target and passed targets.
             # remote_target_loss.shape = [1]
             shift_logits = output.remote_target[..., :-1, :].contiguous()
 
