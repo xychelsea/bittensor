@@ -107,8 +107,8 @@ class Nucleus(nn.Module):
     def local_forward(self, inputs: torch.LongTensor, training: bool = True) -> SimpleNamespace:
         """ Forward pass through local transformer model of nucleus.
             Args:
-                inputs (:obj:`torch.LongTensor` of shape :obj:`(batch_size, block_size)`, `required`):
-                    Input batch of batch_size token sequences each of length block_size, where
+                inputs (:obj:`torch.LongTensor` of shape :obj:`(batch_size, sequence_len)`, `required`):
+                    Input batch of batch_size token sequences each of length sequence_len, where
                     each token is :obj:`torch.int64` in range [0, bittensor.__vocab_size__ - 1]
                 training (:obj:`bool')`, `optional`, defaults to True):
                     Switch to True if this forward pass computes a CLM loss.
