@@ -28,7 +28,10 @@ import torch
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 import requests
-
+# import spacy
+import re 
+import string
+import nltk
 
 from loguru import logger
 import bittensor
@@ -337,6 +340,56 @@ class GenesisTextDataset( Dataset ):
 
         return None
 
+    def data_preprocessing(self, text):
+
+        lower_case = True
+        remove_punctuations = True
+        remove_digits = False
+        remove_stopwords = False
+        stemming = False
+        lemmatization = False
+        remove_extra_space = False
+        standardise_quotations = False
+        remove_extra_space = False
+        standardize_next_line = False
+
+        processed_text = [] 
+        
+        for t in text:
+
+
+            if remove_digits:
+                pass
+
+            if remove_stopwords:
+                pass
+
+            if stemming:
+                pass
+
+            if lemmatization:
+                pass
+
+            if standardise_quotations:
+                pass
+
+            if standardize_next_line:
+                pass
+
+            processed_text.append(t)
+
+        processed_text_2 = ' '.join(processed_text)
+        
+        if lower_case:
+            processed_text_2 = processed_text_2.lower()
+
+        if remove_punctuations:
+            tokenizer = nltk.RegexpTokenizer(r"\w+")
+            processed_text_2 = tokenizer.tokenize(processed_text_2)
+
+        return processed_text_2.split()
+
+
     def dataloader(self, epoch_length = 100):
         """ Creates a torch dataloader out of a subclass of this class.
 
@@ -352,7 +405,8 @@ class GenesisTextDataset( Dataset ):
         
         # Make sure the data remained is at least as big as data_size 
         if len(self.data_remained) < (data_size) :
-            self.data_remained += self.construct_text_corpus(min_data_len = data_size)
+            new_text = self.construct_text_corpus(min_data_len = data_size)
+            self.data_remained += self.data_preprocessing(new_text)
 
         self.data = self.data_remained[:data_size]
         del self.data_remained[:data_size]
