@@ -25,7 +25,6 @@ from typing import List, Tuple, Callable
 import torch
 import grpc
 import wandb
-import matplotlib.pyplot as plt
 from loguru import logger
 import torch.nn.functional as F
 import concurrent
@@ -724,56 +723,5 @@ class Axon( bittensor.grpc.BittensorServicer ):
             columns=['pubkey', 'in_bytes', 'out_bytes', 'qps', 'qps_failed']
         )
         
-        # Create matplot lib charts
-        if metagraph != None:
-
-            # Create uid indexed tables.
-            in_bytes = [0] * (metagraph.n.item() + 1)
-            out_bytes = [0] * (metagraph.n.item() + 1)
-            qps = [0] * (metagraph.n.item() + 1)
-            failed = [0] * (metagraph.n.item() + 1)
-            for pubkey in self.stats.in_bytes_per_pubkey.keys():
-                try:
-                    # Uid of pubkey in metagraph
-                    uid = metagraph.index( pubkey ) 
-                except:
-                    # Null uid.
-                    uid = metagraph.n.item() + 1
-                in_bytes[uid] = self.stats.in_bytes_per_pubkey[pubkey]
-                out_bytes[uid] = self.stats.out_bytes_per_pubkey[pubkey]
-                qps[uid] = self.stats.qps_per_pubkey[pubkey]
-                failed[uid] = self.stats.qps_failed_per_pubkey[pubkey]
-
-            plt.figure()
-            axBR = plt.axes()
-            axBR.plot( in_bytes )
-            axBR.set_title('Bytes recieved per second')
-            axBR.set_xlabel('uid')
-            axBR.set_ylabel('in_bytes')
-            wandb_data['axon_in_bytes'] = axBR
-
-            plt.figure()
-            axBS = plt.axes()
-            axBS.plot( out_bytes )
-            axBS.set_title('Bytes sent per second')
-            axBS.set_xlabel('uid')
-            axBS.set_ylabel('out_bytes') 
-            wandb_data['axon_out_bytes'] = axBS
-
-            plt.figure()
-            axQPS = plt.axes()
-            axQPS.plot( qps )
-            axQPS.set_title('QPS')
-            axQPS.set_xlabel('uid')
-            axQPS.set_ylabel('qps') 
-            wandb_data['axon_qps'] = axQPS
-
-            plt.figure()
-            axF = plt.axes()
-            axF.plot( failed )
-            axF.set_title('Failed')
-            axF.set_xlabel('uid')
-            axF.set_ylabel('failed') 
-            wandb_data['axon_failed'] = axF
 
         return wandb_data 
