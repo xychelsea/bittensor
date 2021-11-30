@@ -342,52 +342,67 @@ class GenesisTextDataset( Dataset ):
 
     def data_preprocessing(self, text):
 
-        lower_case = True
-        remove_punctuations = True
-        remove_digits = False
-        remove_stopwords = False
+        remove_stopwords = True
         stemming = False
         lemmatization = False
-        remove_extra_space = False
-        standardise_quotations = False
-        remove_extra_space = False
+        lower_case = False
         standardize_next_line = False
+        standardise_quotations = False
+        remove_punctuations = False
 
         processed_text = [] 
+        stemmer = nltk.stem.snowball.SnowballStemmer("english")
+        lemmatizer = nltk.stem.WordNetLemmatizer()
+        stop_words = set(nltk.corpus.stopwords.words('english'))
+
         
         for t in text:
 
-
-            if remove_digits:
-                pass
-
             if remove_stopwords:
-                pass
+                if t.lower() in stop_words:
+                    pass
 
             if stemming:
-                pass
+                t = stemmer.steam(t)
 
-            if lemmatization:
-                pass
-
-            if standardise_quotations:
-                pass
-
-            if standardize_next_line:
-                pass
+            elif lemmatization:
+                t = lemmatizer.lemmatize(t)
 
             processed_text.append(t)
 
-        processed_text_2 = ' '.join(processed_text)
+        processed_text_join = ' '.join(processed_text)
+        
+        print('origional', processed_text_join[:1000])
         
         if lower_case:
-            processed_text_2 = processed_text_2.lower()
+            processed_text_join = processed_text_join.lower()
+
+            print('after lower case', processed_text_join[:1000])
+
+        if standardize_next_line:
+            processed_text_join = processed_text_join.replace("\n", ' ')
+        
+            print('after standardizing next line', processed_text_join[:1000])
+            
+        if standardise_quotations:
+            processed_text_join = processed_text_join.replace("“", '"')
+            processed_text_join = processed_text_join.replace("”", '"')
+            processed_text_join = processed_text_join.replace("''", '"')
+            processed_text_join = processed_text_join.replace("``", '"')
+        
+            print('after removing quotation', processed_text_join[:1000])
 
         if remove_punctuations:
+            # must remove \n before removing punctuations
+            processed_text_join = processed_text_join.replace("\n", ' ')
             tokenizer = nltk.RegexpTokenizer(r"\w+")
-            processed_text_2 = tokenizer.tokenize(processed_text_2)
+            processed_text_join = tokenizer.tokenize(processed_text_join)
+        
+            print('after removing punctuations', processed_text_join[:1000])
 
-        return processed_text_2.split()
+        return processed_text_join
+
+        # return processed_text_2.split()
 
 
     def dataloader(self, epoch_length = 100):
