@@ -22,6 +22,7 @@ import os
 from typing import List
 from loguru import logger
 
+import wandb
 import torch.nn.functional as f
 import torch
 
@@ -277,11 +278,9 @@ class Metagraph( torch.nn.Module ):
         elif self._endpoint_objs != None:
             return self._endpoint_objs
         else:
+            self._endpoint_objs = []
             for tensor in self.endpoints:
-                try:
-                    obj = bittensor.endpoint.from_tensor( tensor )
-                except Exception:
-                    obj = None
+                obj = bittensor.endpoint.from_tensor( tensor )
                 self._endpoint_objs.append( obj )
             return self._endpoint_objs
 
@@ -476,7 +475,35 @@ class Metagraph( torch.nn.Module ):
             
         # For contructor.
         return self
-    
+
+    def to_wandb(self):
+        wandb_info = {
+            'metagraph_n': self.n.item(),
+            'metagraph_tau': self.tau.item(),
+            'metagraph_block': self.block.item(),
+        }
+        table_data = []
+        endpoints = self.endpoint_objs
+        for uid in self.uids.tolist():
+            row = [
+                endpoints[uid].hotkey,
+                uid,
+                self.active[uid],
+                self.stake[uid],
+                self.ranks[uid],
+                self.trust[uid],
+                self.consensus[uid],
+                self.incentive[uid],
+                self.dividends[uid],
+                self.emission[uid],
+            ]
+            table_data.append( row )
+        wandb_info['metagraph_data'] = wandb.Table( 
+            data = table_data, 
+            columns=[ 'pubkey', 'uid', 'active', 'stake', 'rank', 'trust', 'consensus', 'incentive', 'dividends', 'emission']
+        )
+        return wandb_info
+            
     def __str__(self):
         return "Metagraph({}, {}, {})".format(self.n.item(), self.block.item(), self.subtensor.network)
         
