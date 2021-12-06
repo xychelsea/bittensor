@@ -167,8 +167,8 @@ class DataPreprocessing():
             else:
                 key = directory_key
 
-            word_by_word_processes = []
             default_processes_name = [p.__name__ for p in self.default_processes[key]]
+            word_by_word_processes = [ p for p in self.word_by_word_processes_seq if p.__name__ in default_processes_name + self.pre_processes_for_all]
             joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in default_processes_name + self.pre_processes_for_all]
 
         for fun in joint_words_processes:
