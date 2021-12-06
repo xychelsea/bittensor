@@ -39,8 +39,9 @@ class dataset:
             dataset_name: list = [],
             save_dataset: bool=None,
             no_tokenizer: bool=None,
-            pre_processes_for_all: list = [],
-            pre_processes_per_dataset: map = {},
+            use_default_preprocesses: bool=None,
+            preprocesses_for_all: list = [],
+            preprocesses_per_dataset: map = {},
 
         ):
         if config == None: 
@@ -53,8 +54,9 @@ class dataset:
         config.dataset.dataset_name = dataset_name if dataset_name != [] else config.dataset.dataset_name
         config.dataset.save_dataset = save_dataset if save_dataset != None else config.dataset.save_dataset
         config.dataset.no_tokenizer = no_tokenizer if no_tokenizer != None else config.dataset.no_tokenizer
-        config.dataset.pre_processes_for_all = pre_processes_for_all if pre_processes_for_all != [] else config.dataset.pre_processes_for_all
-        config.dataset.pre_processes_per_dataset = pre_processes_per_dataset if pre_processes_per_dataset != {} else config.dataset.pre_processes_per_dataset
+        config.dataset.use_default_preprocesses = use_default_preprocesses if use_default_preprocesses != [] else config.dataset.use_default_preprocesses
+        config.dataset.preprocesses_for_all = preprocesses_for_all if preprocesses_for_all != [] else config.dataset.preprocesses_for_all
+        config.dataset.preprocesses_per_dataset = preprocesses_per_dataset if preprocesses_per_dataset != {} else config.dataset.preprocesses_per_dataset
         dataset.check_config( config )
         return dataset_impl.GenesisTextDataset(
             block_size = config.dataset.block_size,
@@ -66,8 +68,9 @@ class dataset:
             save_dataset = config.dataset.save_dataset,
             max_datasets = config.dataset.max_datasets,
             no_tokenizer = config.dataset.no_tokenizer,
-            pre_processes_for_all = config.dataset.pre_processes_for_all,
-            pre_processes_per_dataset = config.dataset.pre_processes_per_dataset,
+            use_default_preprocesses=config.dataset.use_default_preprocesses,
+            preprocesses_for_all = config.dataset.preprocesses_for_all,
+            preprocesses_per_dataset = config.dataset.preprocesses_per_dataset,
         )
 
     @classmethod
@@ -94,10 +97,10 @@ class dataset:
             parser.add_argument('--dataset.save_dataset', action='store_true', help='Save the downloaded dataset or not.', default = bittensor.defaults.dataset.save_dataset)
             parser.add_argument('--dataset.max_datasets',  type=int, help='Number of datasets to load', default = bittensor.defaults.dataset.max_datasets)
             parser.add_argument('--dataset.no_tokenizer', action='store_true', help='To return non-tokenized text (EXPERIMENTAL, DO NOT USE)',default=False)
-            parser.add_argument('--dataset.pre_processes_for_all', type = str, required = False, nargs='*', action = 'store', help="""What pre-processing to use (remove_stopwords, stemming, lemmatization, 
-            lower_case, remove_punctuations, remove_http_links, remove_tags, remove_http_tags, standardise_quotations, remove_latext_math, remove_cite,  remove_next_line, remove_repetitive_character, remove_double_quote, remove_multiple_spaces)""",default=bittensor.defaults.dataset.pre_processes_for_all)
-            parser.add_argument('--dataset.pre_processes_per_dataset', type = json.loads, required = False, action = 'store', help="""What pre-processing to use for each dataset. Pass in the following format '{"BookCorpus2": ["standardise_quotations", "remove_next_line"}' """,default=bittensor.defaults.dataset.pre_processes_per_dataset)
-
+            parser.add_argument('--dataset.use_default_preprocesses', action='store_true', help='if True, use the default data preprocessing function',default=False)
+            parser.add_argument('--dataset.preprocesses_for_all', type = str, required = False, nargs='*', action = 'store', help="""What pre-processing to use (remove_stopwords, stemming, lemmatization, 
+            lower_case, remove_punctuations, remove_http_links, remove_tags, remove_http_tags, standardise_quotations, remove_latext_math, remove_cite,  remove_next_line, remove_repetitive_character, remove_double_quote, remove_multiple_spaces)""",default=bittensor.defaults.dataset.preprocesses_for_all)
+            parser.add_argument('--dataset.preprocesses_per_dataset', type = json.loads, required = False, action = 'store', help="""What pre-processing to use for each dataset. Pass in the following format '{"BookCorpus2": ["standardise_quotations", "remove_next_line"}' """,default=bittensor.defaults.dataset.preprocesses_per_dataset)
 
         except argparse.ArgumentError:
             # re-parsing arguments.
@@ -116,8 +119,8 @@ class dataset:
         defaults.dataset.data_dir = os.getenv('BT_DATASET_DATADIR') if os.getenv('BT_DATASET_DATADIR') != None else '~/.bittensor/data/'
         defaults.dataset.save_dataset = os.getenv('BT_DATASET_SAVE_DATASET') if os.getenv('BT_DATASET_SAVE_DATASET') != None else False
         defaults.dataset.max_datasets = os.getenv('BT_DATASET_max_datasets') if os.getenv('BT_DATASET_max_datasets') != None else 3
-        defaults.dataset.pre_processes_for_all = os.getenv('BT_DATASET_PRE_PROCESSES_FOR_ALL') if os.getenv('BT_DATASET_PRE_PROCESSES_FOR_ALL') != None else []
-        defaults.dataset.pre_processes_per_dataset = os.getenv('BT_DATASET_PRE_PROCESSES_FOR_ALL') if os.getenv('BT_DATASET_PRE_PROCESSES_FOR_ALL') != None else {}
+        defaults.dataset.preprocesses_for_all = os.getenv('BT_DATASET_PRE_PROCESSES_FOR_ALL') if os.getenv('BT_DATASET_PRE_PROCESSES_FOR_ALL') != None else []
+        defaults.dataset.preprocesses_per_dataset = os.getenv('BT_DATASET_PRE_PROCESSES_FOR_ALL') if os.getenv('BT_DATASET_PRE_PROCESSES_FOR_ALL') != None else {}
 
     @classmethod
     def check_config( cls, config: 'bittensor.Config' ):

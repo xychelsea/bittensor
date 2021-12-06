@@ -111,11 +111,13 @@ class Dataset():
 class DataPreprocessing():
     def __init__(
         self,
-        pre_processes_for_all = [],
-        pre_processes_per_dataset = {}
+        use_default_preprocesses = False,
+        preprocesses_for_all = [],
+        preprocesses_per_dataset = {}
     ):
-        self.pre_processes_for_all = pre_processes_for_all
-        self.pre_processes_per_dataset = pre_processes_per_dataset
+        self.use_default_preprocesses = use_default_preprocesses
+        self.preprocesses_for_all = preprocesses_for_all
+        self.preprocesses_per_dataset = preprocesses_per_dataset
 
         self.default_processes = {
             'BookCorpus2': [self.standardise_quotations, self.remove_next_line, self.remove_multiple_spaces],
@@ -157,19 +159,23 @@ class DataPreprocessing():
 
 
     def clean(self, directory_key, text):
-        if directory_key in self.pre_processes_per_dataset.keys():
-            word_by_word_processes = [ p for p in self.word_by_word_processes_seq if p.__name__ in self.pre_processes_per_dataset[directory_key] + self.pre_processes_for_all]
-            joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in self.pre_processes_per_dataset[directory_key] + self.pre_processes_for_all]
-            
-        else:
+        if self.use_default_preprocesses:
             if directory_key not in self.default_processes.keys():
                 key = 'default'
             else:
                 key = directory_key
 
             default_processes_name = [p.__name__ for p in self.default_processes[key]]
-            word_by_word_processes = [ p for p in self.word_by_word_processes_seq if p.__name__ in default_processes_name + self.pre_processes_for_all]
-            joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in default_processes_name + self.pre_processes_for_all]
+            word_by_word_processes = [ p for p in self.word_by_word_processes_seq if p.__name__ in default_processes_name + self.preprocesses_for_all]
+            joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in default_processes_name + self.preprocesses_for_all]
+
+        elif directory_key in self.preprocesses_per_dataset.keys():
+            word_by_word_processes = [ p for p in self.word_by_word_processes_seq if p.__name__ in self.preprocesses_per_dataset[directory_key] + self.preprocesses_for_all]
+            joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in self.preprocesses_per_dataset[directory_key] + self.preprocesses_for_all]
+
+        else:
+            word_by_word_processes = [ p for p in self.word_by_word_processes_seq if p.__name__ in self.preprocesses_for_all]
+            joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in self.preprocesses_for_all]
 
         for fun in joint_words_processes:
             text = fun(text)
@@ -288,8 +294,9 @@ class GenesisTextDataset( Dataset ):
         save_dataset,
         max_datasets,
         no_tokenizer,
-        pre_processes_for_all,
-        pre_processes_per_dataset
+        use_default_preprocesses,
+        preprocesses_for_all,
+        preprocesses_per_dataset
     ):
         super().__init__()
         self.block_size = block_size
@@ -312,8 +319,9 @@ class GenesisTextDataset( Dataset ):
         # Used to refresh corpus if we've exhausted the whole dataset
         self.refresh_corpus = True
         self.data_preprocessing = DataPreprocessing(
-            pre_processes_for_all=pre_processes_for_all,
-            pre_processes_per_dataset=pre_processes_per_dataset
+            use_default_preprocesses = use_default_preprocesses,
+            preprocesses_for_all=preprocesses_for_all,
+            preprocesses_per_dataset=preprocesses_per_dataset
         )
 
         self.build_hash_table()
