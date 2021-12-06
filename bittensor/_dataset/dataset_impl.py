@@ -28,10 +28,12 @@ import torch
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 import requests
-# import spacy
 import re 
-import string
 import nltk
+import json
+
+nltk.download('wordnet')
+
 
 from loguru import logger
 import bittensor
@@ -106,6 +108,172 @@ class Dataset():
     def __getitem__(self, idx):
         """ Returns the next batch from the dataset.
         """
+class DataPreprocessing():
+    def __init__(
+        self,
+        pre_processes_for_all = [],
+        pre_processes_per_dataset = {}
+    ):
+        self.pre_processes_for_all = pre_processes_for_all
+        self.pre_processes_per_dataset = pre_processes_per_dataset
+
+        self.default_processes = {
+            'BookCorpus2': [self.standardise_quotations, self.remove_next_line, self.remove_multiple_spaces],
+            'Books3': [self.standardise_quotations, self.remove_next_line, self.remove_multiple_spaces],
+            'Gutenberg_PG': [self.standardise_quotations, self.remove_next_line, self.remove_repetitive_character],
+            'ArXiv': [self.standardise_quotations, self.remove_next_line, self.remove_latext_math, self.remove_cite, self.remove_tags, self.remove_repetitive_character, self.remove_multiple_spaces],
+            'PhilPapers': [self.standardise_quotations, self.remove_next_line, self.remove_latext_math, self.remove_cite, self.remove_tags, self.remove_repetitive_character, self.remove_multiple_spaces],
+            'HackerNews': [self.standardise_quotations, self.remove_next_line, self.remove_http_links, self.remove_cite, self.remove_repetitive_character, self.remove_multiple_spaces],
+            'OpenSubtitles': [self.standardise_quotations, self.remove_next_line, self.remove_double_quote, self.remove_multiple_spaces],
+            'YoutubeSubtitles': [self.standardise_quotations, self.remove_next_line, self.remove_multiple_spaces, self.lower_case],
+            'UbuntuIRC': [self.standardise_quotations, self.remove_next_line, self.remove_multiple_spaces, self.remove_http_tags],
+            'default': [self.standardise_quotations, self.remove_next_line, self.remove_multiple_spaces]
+        }
+
+        self.stemmer = nltk.stem.snowball.SnowballStemmer("english")
+        self.lemmatizer = nltk.stem.WordNetLemmatizer()
+        self.stop_words = set(nltk.corpus.stopwords.words('english'))
+        
+        self.word_by_word_processes_seq = [
+            self.remove_stopwords,
+            self.stemming,
+            self.lemmatization
+        ]
+
+        self.joint_words_processes_seq = [
+            self.lower_case,
+            self.remove_punctuations,
+            self.remove_http_links,
+            self.remove_tags,
+            self.remove_http_tags,
+            self.standardise_quotations,
+            self.remove_latext_math,
+            self.remove_cite, 
+            self.remove_next_line,
+            self.remove_repetitive_character,
+            self.remove_double_quote,
+            self.remove_multiple_spaces,
+        ]
+
+
+    def clean(self, directory_key, text):
+
+        if directory_key in self.pre_processes_per_dataset.keys():
+            word_by_word_processes = [ p for p in self.word_by_word_processes_seq if p.__name__ in self.pre_processes_per_dataset[directory_key] + self.pre_processes_for_all]
+            joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in self.pre_processes_per_dataset[directory_key] + self.pre_processes_for_all]
+            
+        else:
+            if directory_key not in self.default_processes.keys():
+                key = 'default'
+            else:
+                key = directory_key
+
+            word_by_word_processes = []
+            default_processes_name = [p.__name__ for p in self.default_processes[key]]
+            joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in default_processes_name + self.pre_processes_for_all]
+
+        for fun in joint_words_processes:
+            text = fun(text)
+        
+        text = text.split(" ")
+        for fun in word_by_word_processes:
+            text = fun(text)
+
+        return text
+
+    def remove_nested_parentheses(self, text, open_parent, close_parent):
+        n = len(open_parent)
+        result = ''
+        skip = 0
+        skip_n = 0
+        for i, t in enumerate(text):
+            if text[i:i+n] == open_parent:
+                skip += 1
+            elif skip_n > 0 :
+                skip_n -= 1
+            elif text[i:i+n] == close_parent and skip > 0:
+                skip -= 1
+                skip_n = n-1
+            elif skip == 0:
+                result += t
+        return result
+
+    def remove_stopwords(self, text):
+        return [t for t in text if not t.lower() in self.stop_words]
+    
+    def stemming(self, text):
+        return [self.stemmer.stem(t) for t in text]
+    
+    def lemmatization(self, text):
+        return [self.lemmatizer.lemmatize(t) for t in text]
+    
+    def lower_case(self, text):
+        return text.lower()
+
+    def remove_next_line(self, text):
+        text = text.replace("\\n", " ")
+        text = text.replace("\n", " ")
+        text = text.replace("\ ", " ")
+        text = self.remove_multiple_spaces(text)
+        return text
+
+    def standardise_quotations(self, text):
+        text = text.replace("“", '"')
+        text = text.replace("”", '"')
+        text = text.replace("''", '"')
+        text = text.replace("``", '"')
+        text = text.replace("\“", '"')
+        text = text.replace("\”", '"')
+        text = text.replace('\\"', '"')
+        return text
+
+    def remove_punctuations(self, text):
+        text = self.remove_next_line(self, text)
+        regex = r"[^\w\s]"
+        text = re.sub(regex, "", text)
+        return text
+
+    def remove_latext_math(self, text):
+        # remove $ * $ pattern
+        regex = r"(\$+)(?:(?!\1)[\s\S])*\1"
+        text = re.sub(regex, "", text)
+        return text
+
+    def remove_cite(self, text):
+        # remove \\[ * \\] pattern
+        text = self.remove_nested_parentheses(text, '\\[', '\\]')
+        text = self.remove_nested_parentheses(text, '\[', '\]')
+        text = self.remove_nested_parentheses(text, '[', ']')
+        text = self.remove_nested_parentheses(text, '{', '}')
+
+        return text
+
+    def remove_tags(self, text):
+        regex = r'(\\)\w+'
+        text = re.sub(regex, "", text)
+        return text
+
+    def remove_http_links(self, text):
+        text = re.sub(r'http\S+', '', text)
+        return text
+
+    def remove_repetitive_character(self, text):
+        regex = r'([\*\=\-\~]{2,10})'
+        text = re.sub(regex, "", text)
+        return text
+
+    def remove_double_quote(self, text):
+        text = re.sub(r'\"', "", text)
+        return text
+
+    def remove_http_tags(self, text):
+        regex = r'\<\w+\>'
+        text = re.sub(regex, "", text)
+        return text
+
+    def remove_multiple_spaces(self, text):
+        text = re.sub(r'([\s]{2,10})', " ", text)
+        return text
 
 class GenesisTextDataset( Dataset ):
     """ One kind of dataset that caters for the data from ipfs 
@@ -120,7 +288,9 @@ class GenesisTextDataset( Dataset ):
         data_dir,
         save_dataset,
         max_datasets,
-        no_tokenizer
+        no_tokenizer,
+        pre_processes_for_all,
+        pre_processes_per_dataset
     ):
         super().__init__()
         self.block_size = block_size
@@ -142,6 +312,10 @@ class GenesisTextDataset( Dataset ):
 
         # Used to refresh corpus if we've exhausted the whole dataset
         self.refresh_corpus = True
+        self.data_preprocessing = DataPreprocessing(
+            pre_processes_for_all=pre_processes_for_all,
+            pre_processes_per_dataset=pre_processes_per_dataset
+        )
 
         self.build_hash_table()
 
@@ -173,7 +347,7 @@ class GenesisTextDataset( Dataset ):
             
             else:
                 # --- Get the directory links if there is valid response, else check on another dataset_hash 
-                directories += response.json()
+                directories += [{'Dataset': dataset_key, **r } for r in response.json()]
                 logger.success("Loaded dataset:".ljust(20) + "<blue>{}</blue>".format(dataset_key))
                 
         if len(directories) == 0:
@@ -193,8 +367,8 @@ class GenesisTextDataset( Dataset ):
                     logger.warning("Failed to retrieve directory, ignoring directory:".ljust(20) + "<blue>{}</blue>".format(key))
                 
                 else:
-                    # --- Get the directory links if there is valid response, else check on another dataset_hash 
-                    directories += response.json()
+                    # --- Get the directory links if there is valid response, else check on another dataset_hash
+                    directories += [{'Dataset': key, **r } for r in response.json()]
                     logger.success("Loaded dataset:".ljust(20) + "<blue>{}</blue>".format(key))
             else:
                 logger.error('Incorrect dataset name:'.ljust(20) + " <red>{}</red>.".format(key)+' Must be one of the following {}'.format(bittensor.__datasets__))
@@ -239,7 +413,7 @@ class GenesisTextDataset( Dataset ):
                     
                     return self.extract_datafile_dir(random_sub_directory)
                 else:
-                    logger.warning("Directory seems empty, ignoring directory:".ljust(20) + "<blue>{}</blue>". format(dir_hash))
+                    logger.warning("Directory seems empty, ignoring directory:".ljust(20) + "<blue>{}</blue>". format(directory['Hash']))
         return None
 
     def get_text(self, file):
@@ -275,7 +449,14 @@ class GenesisTextDataset( Dataset ):
             if response.status_code != 200:
                 logger.warning("Failed to retrieve file, ignoring file:".ljust(20) + "<blue>{}</blue>".format(file_name))
             else:
-                text = response.text
+                try:
+                    text = json.loads(response.text)["data"]
+                except Exception:
+                    try:
+                        text = json.loads(response.text)["Data"]
+                    except Exception:
+                        text = response.text
+
                 logger.success("Downloaded:".ljust(20) + "<blue>{}</blue>".format(file_name))
                 
                 # --- Save text if the save_dataset flag is on.
@@ -304,7 +485,7 @@ class GenesisTextDataset( Dataset ):
             logger.success("Retrieving a dataset files from the IPFS gateway...")
 
             # --- Get directories from a random dataset_hash
-            if self.dataset_name == 'default':
+            if len(self.dataset_name) == 0:
                 directories = self.get_random_directories()
             else:
                 directories = self.get_directories(self.dataset_name)
@@ -323,7 +504,10 @@ class GenesisTextDataset( Dataset ):
                 # --- Dont stop until the corpus size and the minimum data_length was reached.
                 while (total_dataset_size <= self.max_corpus_size) or (total_dataset_len < min_data_len):
                     # --- Get a directory that leads to a datafile.
-                    random_datafile_dir = self.extract_datafile_dir(directories[directory_order[i]])
+                    directory = directories[directory_order[i]]
+
+
+                    random_datafile_dir = self.extract_datafile_dir(directory)
                     
                     if random_datafile_dir == None:
                         pass
@@ -331,11 +515,13 @@ class GenesisTextDataset( Dataset ):
                     # --- Get text from the datafile directory
                     try:
                         text = self.get_text(random_datafile_dir)
-                    except: 
-                        text = None
+                        text_list = self.data_preprocessing.clean(directory['Dataset'], text)
 
-                    if text != None:
-                        text_list = text.split() 
+                    except Exception as e: 
+                        text = None
+                        text_list = None
+
+                    if text != None and text_list != None:
                         data_corpus.extend(text_list)
                         total_dataset_size += int(random_datafile_dir['Size'])
                         total_dataset_len += len(text_list)
@@ -345,75 +531,11 @@ class GenesisTextDataset( Dataset ):
 
             logger.error("It appears the directory is empty... Restart your miner to try again.")
             return None
+
         except Exception as e:
             logger.error("Ran into exception when trying to retrieve dataset from IPFS: {}".format(e))
 
         return None
-
-    def data_preprocessing(self, text):
-
-        remove_stopwords = True
-        stemming = False
-        lemmatization = False
-        lower_case = False
-        standardize_next_line = False
-        standardise_quotations = False
-        remove_punctuations = False
-
-        processed_text = [] 
-        stemmer = nltk.stem.snowball.SnowballStemmer("english")
-        lemmatizer = nltk.stem.WordNetLemmatizer()
-        stop_words = set(nltk.corpus.stopwords.words('english'))
-
-        
-        for t in text:
-
-            if remove_stopwords:
-                if t.lower() in stop_words:
-                    pass
-
-            if stemming:
-                t = stemmer.steam(t)
-
-            elif lemmatization:
-                t = lemmatizer.lemmatize(t)
-
-            processed_text.append(t)
-
-        processed_text_join = ' '.join(processed_text)
-        
-        print('origional', processed_text_join[:1000])
-        
-        if lower_case:
-            processed_text_join = processed_text_join.lower()
-
-            print('after lower case', processed_text_join[:1000])
-
-        if standardize_next_line:
-            processed_text_join = processed_text_join.replace("\n", ' ')
-        
-            print('after standardizing next line', processed_text_join[:1000])
-            
-        if standardise_quotations:
-            processed_text_join = processed_text_join.replace("“", '"')
-            processed_text_join = processed_text_join.replace("”", '"')
-            processed_text_join = processed_text_join.replace("''", '"')
-            processed_text_join = processed_text_join.replace("``", '"')
-        
-            print('after removing quotation', processed_text_join[:1000])
-
-        if remove_punctuations:
-            # must remove \n before removing punctuations
-            processed_text_join = processed_text_join.replace("\n", ' ')
-            tokenizer = nltk.RegexpTokenizer(r"\w+")
-            processed_text_join = tokenizer.tokenize(processed_text_join)
-        
-            print('after removing punctuations', processed_text_join[:1000])
-
-        return processed_text_join
-
-        # return processed_text_2.split()
-
 
     def dataloader(self, epoch_length = 100):
         """ Creates a torch dataloader out of a subclass of this class.
@@ -429,9 +551,8 @@ class GenesisTextDataset( Dataset ):
         data_size = epoch_length * self.batch_size * self.block_size
         
         # Make sure the data remained is at least as big as data_size 
-        if len(self.data_remained) < (data_size) :
-            new_text = self.construct_text_corpus(min_data_len = data_size)
-            self.data_remained += self.data_preprocessing(new_text)
+        while len(self.data_remained) <= (data_size):
+            self.data_remained +=  self.construct_text_corpus(min_data_len = data_size)
 
         self.data = self.data_remained[:data_size]
         del self.data_remained[:data_size]
@@ -441,7 +562,8 @@ class GenesisTextDataset( Dataset ):
                     shuffle=True,
                     batch_size=self.batch_size,
                     num_workers=self.num_workers,
-                    drop_last=True)
+                    drop_last=True,
+                    )
 
     def __next__(self):
         """Returns the next element from the dataset. 
@@ -477,13 +599,19 @@ class GenesisTextDataset( Dataset ):
         """
         start_idx = (idx * self.block_size) % len(self.data)
         end_idx = start_idx + self.block_size
+        
         if self.no_tokenizer == False:
             tokenized_text = torch.tensor(self.tokenizer(" ".join(self.data[start_idx:end_idx]), padding=True, truncation=True)['input_ids'], dtype=torch.long)
+            
         elif self.no_tokenizer == True:
             tokenized_text = " ".join(self.data[start_idx:end_idx])
 
-        return tokenized_text[:self.block_size]
-
+        block = tokenized_text[:self.block_size]
+        if len(block) < self.block_size:
+            return torch.cat((block, torch.tensor([0]*(self.block_size - len(block)))))
+        else:
+            return block
+    
     def build_hash_table(self):
         self.dataset_hashes = {}
         response = self.retrieve_directory(self.node_get, (('arg', self.mountain_hash),))
