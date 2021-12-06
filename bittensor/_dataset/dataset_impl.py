@@ -157,7 +157,6 @@ class DataPreprocessing():
 
 
     def clean(self, directory_key, text):
-
         if directory_key in self.pre_processes_per_dataset.keys():
             word_by_word_processes = [ p for p in self.word_by_word_processes_seq if p.__name__ in self.pre_processes_per_dataset[directory_key] + self.pre_processes_for_all]
             joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in self.pre_processes_per_dataset[directory_key] + self.pre_processes_for_all]
@@ -570,7 +569,7 @@ class GenesisTextDataset( Dataset ):
         """
         if self.__infinite_dataset_iterator == None:
             self.__infinite_dataset_iterator = iter([input for input in self.dataloader(1000)]) # should set it to 1000
-        
+
         try:
             return next(self.__infinite_dataset_iterator)
         
@@ -599,7 +598,7 @@ class GenesisTextDataset( Dataset ):
         """
         start_idx = (idx * self.block_size) % len(self.data)
         end_idx = start_idx + self.block_size
-        
+
         if self.no_tokenizer == False:
             tokenized_text = torch.tensor(self.tokenizer(" ".join(self.data[start_idx:end_idx]), padding=True, truncation=True)['input_ids'], dtype=torch.long)
             

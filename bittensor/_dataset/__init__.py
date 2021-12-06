@@ -40,7 +40,7 @@ class dataset:
             save_dataset: bool=None,
             no_tokenizer: bool=None,
             pre_processes_for_all: list = [],
-            pre_processes_per_dataset: list = {},
+            pre_processes_per_dataset: map = {},
 
         ):
         if config == None: 
@@ -53,8 +53,8 @@ class dataset:
         config.dataset.dataset_name = dataset_name if dataset_name != [] else config.dataset.dataset_name
         config.dataset.save_dataset = save_dataset if save_dataset != None else config.dataset.save_dataset
         config.dataset.no_tokenizer = no_tokenizer if no_tokenizer != None else config.dataset.no_tokenizer
-        config.dataset.pre_processes_for_all = pre_processes_for_all if pre_processes_for_all != None else config.dataset.pre_processes_for_all
-        config.dataset.pre_processes_per_dataset = pre_processes_per_dataset if pre_processes_per_dataset != None else config.dataset.pre_processes_per_dataset
+        config.dataset.pre_processes_for_all = pre_processes_for_all if pre_processes_for_all != [] else config.dataset.pre_processes_for_all
+        config.dataset.pre_processes_per_dataset = pre_processes_per_dataset if pre_processes_per_dataset != {} else config.dataset.pre_processes_per_dataset
         dataset.check_config( config )
         return dataset_impl.GenesisTextDataset(
             block_size = config.dataset.block_size,
@@ -95,8 +95,8 @@ class dataset:
             parser.add_argument('--dataset.max_datasets',  type=int, help='Number of datasets to load', default = bittensor.defaults.dataset.max_datasets)
             parser.add_argument('--dataset.no_tokenizer', action='store_true', help='To return non-tokenized text (EXPERIMENTAL, DO NOT USE)',default=False)
             parser.add_argument('--dataset.pre_processes_for_all', type = str, required = False, nargs='*', action = 'store', help="""What pre-processing to use (remove_stopwords, stemming, lemmatization, 
-            lower_case, remove_punctuations, remove_http_links, remove_tags, remove_http_tags, standardise_quotations, remove_latext_math, remove_cite,  remove_next_line, remove_repetitive_character, remove_double_quote, remove_multiple_spaces)""",default=[])
-            parser.add_argument('--dataset.pre_processes_per_dataset', type = json.loads, required = False, action = 'store', help="""What pre-processing to use for each dataset. Pass in the following format '{"BookCorpus2": ["standardise_quotations", "remove_next_line"}' """,default={})
+            lower_case, remove_punctuations, remove_http_links, remove_tags, remove_http_tags, standardise_quotations, remove_latext_math, remove_cite,  remove_next_line, remove_repetitive_character, remove_double_quote, remove_multiple_spaces)""",default=bittensor.defaults.dataset.pre_processes_for_all)
+            parser.add_argument('--dataset.pre_processes_per_dataset', type = json.loads, required = False, action = 'store', help="""What pre-processing to use for each dataset. Pass in the following format '{"BookCorpus2": ["standardise_quotations", "remove_next_line"}' """,default=bittensor.defaults.dataset.pre_processes_per_dataset)
 
 
         except argparse.ArgumentError:
