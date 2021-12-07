@@ -318,16 +318,17 @@ class GenesisTextDataset( Dataset ):
 
         # Used to refresh corpus if we've exhausted the whole dataset
         self.refresh_corpus = True
-        self.data_preprocessing = DataPreprocessing(
-            use_default_preprocesses = use_default_preprocesses,
-            preprocesses_for_all=preprocesses_for_all,
-            preprocesses_per_dataset=preprocesses_per_dataset
-        )
 
         self.build_hash_table()
 
         if not os.path.isdir(os.path.expanduser(data_dir)):
             os.makedirs(os.path.expanduser(data_dir))
+            
+        self.data_preprocessing = DataPreprocessing(
+            use_default_preprocesses = use_default_preprocesses,
+            preprocesses_for_all=preprocesses_for_all,
+            preprocesses_per_dataset=preprocesses_per_dataset
+        )
 
     def get_random_directories(self):
         r""" Getting directories from a random dataset_hash
