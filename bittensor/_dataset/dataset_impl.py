@@ -171,8 +171,13 @@ class DataPreprocessing():
             joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in default_processes_name ]
 
         elif directory_key in self.preprocesses_per_dataset.keys():
-            word_by_word_processes = [ p for p in self.word_by_word_processes_seq if p.__name__ in self.preprocesses_per_dataset[directory_key] ]
-            joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in self.preprocesses_per_dataset[directory_key] ]
+            if directory_key not in self.preprocesses_per_dataset.keys():
+                key = 'default'
+            else:
+                key = directory_key
+
+            word_by_word_processes = [ p for p in self.word_by_word_processes_seq if p.__name__ in self.preprocesses_per_dataset[key] ]
+            joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in self.preprocesses_per_dataset[key] ]
 
         else:
             word_by_word_processes = []
