@@ -31,6 +31,7 @@ import requests
 import re 
 import nltk
 import json
+import yaml
 
 nltk.download('wordnet')
 
@@ -112,12 +113,12 @@ class DataPreprocessing():
     def __init__(
         self,
         use_default_preprocesses = False,
-        preprocesses_for_all = [],
-        preprocesses_per_dataset = {}
     ):
         self.use_default_preprocesses = use_default_preprocesses
-        self.preprocesses_for_all = preprocesses_for_all
-        self.preprocesses_per_dataset = preprocesses_per_dataset
+        
+        preprocessing_config_path = os.path.expanduser("~/.bittensor/bittensor/bittensor/_dataset/data_preprocessing.yaml")
+        with open(preprocessing_config_path, "r") as stream:
+            self.preprocesses_per_dataset = yaml.safe_load(stream)
 
         self.default_processes = {
             'BookCorpus2': [self.standardise_quotations, self.remove_next_line, self.remove_multiple_spaces],
@@ -166,16 +167,16 @@ class DataPreprocessing():
                 key = directory_key
 
             default_processes_name = [p.__name__ for p in self.default_processes[key]]
-            word_by_word_processes = [ p for p in self.word_by_word_processes_seq if p.__name__ in default_processes_name + self.preprocesses_for_all]
-            joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in default_processes_name + self.preprocesses_for_all]
+            word_by_word_processes = [ p for p in self.word_by_word_processes_seq if p.__name__ in default_processes_name ]
+            joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in default_processes_name ]
 
         elif directory_key in self.preprocesses_per_dataset.keys():
-            word_by_word_processes = [ p for p in self.word_by_word_processes_seq if p.__name__ in self.preprocesses_per_dataset[directory_key] + self.preprocesses_for_all]
-            joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in self.preprocesses_per_dataset[directory_key] + self.preprocesses_for_all]
+            word_by_word_processes = [ p for p in self.word_by_word_processes_seq if p.__name__ in self.preprocesses_per_dataset[directory_key] ]
+            joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in self.preprocesses_per_dataset[directory_key] ]
 
         else:
-            word_by_word_processes = [ p for p in self.word_by_word_processes_seq if p.__name__ in self.preprocesses_for_all]
-            joint_words_processes = [ p for p in self.joint_words_processes_seq if p.__name__ in self.preprocesses_for_all]
+            word_by_word_processes = []
+            joint_words_processes = []
 
         for fun in joint_words_processes:
             text = fun(text)
@@ -295,8 +296,6 @@ class GenesisTextDataset( Dataset ):
         max_datasets,
         no_tokenizer,
         use_default_preprocesses,
-        preprocesses_for_all,
-        preprocesses_per_dataset
     ):
         super().__init__()
         self.block_size = block_size
@@ -326,8 +325,6 @@ class GenesisTextDataset( Dataset ):
             
         self.data_preprocessing = DataPreprocessing(
             use_default_preprocesses = use_default_preprocesses,
-            preprocesses_for_all=preprocesses_for_all,
-            preprocesses_per_dataset=preprocesses_per_dataset
         )
 
     def get_random_directories(self):
