@@ -29,7 +29,7 @@ import datetime
 import traceback
 import sys
 import os
-
+import time
 from loguru import logger; logger = logger.opt(colors=True)
 from torch.nn.utils import clip_grad_norm_
 from datetime import datetime,timedelta
@@ -90,18 +90,22 @@ def serve( config, server):
         """
         # -- normalized grads -- 
         grads_dy = grads_dy/(grads_dy.sum() + 0.00001)
-        
-        with mutex:
-            outputs_y = gp_server.encode_forward( inputs_x.to(server.device) )
-            with torch.autograd.set_detect_anomaly(True):
-                torch.autograd.backward (
-                    tensors = [ outputs_y ],
-                    grad_tensors = [ grads_dy.to(server.device) ],
-                    retain_graph=True
-                )
-            logger.info('Backwards axon gradient applied')
+        if config.neuron.training:
+            with mutex:
+                outputs_y = gp_server.encode_forward( inputs_x.to(server.device) )
+                with torch.autograd.set_detect_anomaly(True):
+                    torch.autograd.backward (
+                        tensors = [ outputs_y ],
+                        grad_tensors = [ grads_dy.to(server.device) ],
+                        retain_graph=True
+                    )
+                logger.info('Backwards axon gradient applied')
 
-        gp_server.backward_gradients += inputs_x.size(0)
+            gp_server.backward_gradients += inputs_x.size(0)
+        else:
+            pass
+
+        
        
     def priority(pubkey:str, request_type:bittensor.proto.RequestType, inputs_x) -> float:
         r"""Calculates the priority on requests based on stake and size of input
@@ -200,6 +204,9 @@ def serve( config, server):
         uid = metagraph.hotkeys.index( wallet.hotkey.ss58_address )
         chain_weights[uid] = 1 
 
+        # --- last sync block 
+        last_sync_block = subtensor.get_current_block()
+
         # --  serve axon to the network.
         axon.start().serve(subtensor = subtensor)
         
@@ -209,35 +216,40 @@ def serve( config, server):
             start_block = current_block
             end_block = current_block + config.neuron.blocks_per_epoch
             interation = 0
-
-            # --- Training step.
-            while end_block >= current_block:
-                if current_block != subtensor.get_current_block():
-                    loss, _ = gp_server( next( dataset ).to(gp_server.device) )
-                    if interation > 0 : 
-                        losses += loss
-                    else:
-                        losses = loss
-                    interation += 1
-                    current_block = subtensor.get_current_block()
-            
-            #Custom learning rate
-            if gp_server.backward_gradients > 0:
-                optimizer.param_groups[0]['lr'] =  1/(gp_server.backward_gradients)
+            if config.neuron.training:
+                # --- Training step.
+                while end_block >= current_block:
+                    if current_block != subtensor.get_current_block():
+                        loss, _ = gp_server( next( dataset ).to(gp_server.device) )
+                        if interation > 0 : 
+                            losses += loss
+                        else:
+                            losses = loss
+                        interation += 1
+                        current_block = subtensor.get_current_block()
+                
+                #Custom learning rate
+                if gp_server.backward_gradients > 0:
+                    optimizer.param_groups[0]['lr'] =  1/(gp_server.backward_gradients)
+                else:
+                    optimizer.param_groups[0]['lr'] =  0.1
+                
+                # --- Update parameters
+                if interation != 0 or gp_server.backward_gradients != 0:
+                    with mutex:
+                        logger.info('Backpropagation Started')
+                        if interation != 0:
+                            losses.backward()
+                        clip_grad_norm_(gp_server.parameters(), 1.0)
+                        
+                        optimizer.step()
+                        optimizer.zero_grad()
+                        logger.info('Backpropagation Successful: Model updated')
             else:
-                optimizer.param_groups[0]['lr'] =  0.1
-            
-            # --- Update parameters
-            if interation != 0 or gp_server.backward_gradients != 0:
-                with mutex:
-                    logger.info('Backpropagation Started')
-                    if interation != 0:
-                        losses.backward()
-                    clip_grad_norm_(gp_server.parameters(), 1.0)
-                    
-                    optimizer.step()
-                    optimizer.zero_grad()
-                    logger.info('Backpropagation Successful: Model updated')
+                gp_server.eval()
+                while end_block >= current_block:
+                    current_block = subtensor.get_current_block()
+                    time.sleep(10)
 
             nn = subtensor.neuron_for_pubkey(wallet.hotkey.ss58_address)
 
@@ -294,9 +306,9 @@ def serve( config, server):
                     logger.error('Failure setting weights on chain with error: {}', e)
 
 
-            if current_block - start_block > 2000:
+            if current_block - last_sync_block > 2000:
                 metagraph.sync()
-                start_block = current_block
+                last_sync_block = current_block
 
 
     except KeyboardInterrupt:
