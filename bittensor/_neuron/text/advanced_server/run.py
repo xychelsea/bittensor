@@ -245,6 +245,10 @@ def serve( config, server):
                         optimizer.step()
                         optimizer.zero_grad()
                         logger.info('Backpropagation Successful: Model updated')
+
+                # Save the model
+                gp_server.save(config.neuron.full_path)
+                
             else:
                 gp_server.eval()
                 while end_block >= current_block:
@@ -280,9 +284,6 @@ def serve( config, server):
                 wandb_info_axon = axon.to_wandb()                
                 wandb.log( { **wandb_data, **wandb_info_axon }, step = current_block )
                 wandb.log( { 'stats': wandb.Table( dataframe = df ) }, step = current_block )
-
-            # Save the model
-            gp_server.save(config.neuron.full_path)
             
             if current_block % 10 == 0:
                 
