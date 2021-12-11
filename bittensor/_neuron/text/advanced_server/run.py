@@ -90,7 +90,7 @@ def serve( config, server):
         """
         # -- normalized grads -- 
         grads_dy = grads_dy/(grads_dy.sum() + 0.00001)
-        if config.neuron.training:
+        if config.neuron.eval:
             with mutex:
                 outputs_y = gp_server.encode_forward( inputs_x.to(server.device) )
                 with torch.autograd.set_detect_anomaly(True):
@@ -216,7 +216,7 @@ def serve( config, server):
             start_block = current_block
             end_block = current_block + config.neuron.blocks_per_epoch
             interation = 0
-            if config.neuron.training:
+            if config.neuron.eval:
                 # --- Training step.
                 while end_block >= current_block:
                     if current_block != subtensor.get_current_block():
@@ -248,7 +248,7 @@ def serve( config, server):
 
                 # Save the model
                 gp_server.save(config.neuron.full_path)
-                
+
             else:
                 gp_server.eval()
                 while end_block >= current_block:
