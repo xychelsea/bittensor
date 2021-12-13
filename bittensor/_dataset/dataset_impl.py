@@ -51,8 +51,8 @@ class Dataset():
 
     @staticmethod
     def requests_retry_session(
-            retries=10,
-            backoff_factor=0.5,
+            retries=3,
+            backoff_factor=0.3,
             status_forcelist=(104, 500, 502, 504),
             session=None,
         ):
@@ -275,8 +275,6 @@ class GenesisTextDataset( Dataset ):
                 logger.warning("Failed to retrieve file, ignoring file:".ljust(20) + "<blue>{}</blue>".format(file_name))
             else:
                 text = response.text
-                print(file_hash)
-                print(file_hash)
                 print(file_hash)
                 logger.success("Downloaded:".ljust(20) + "<blue>{}</blue>".format(file_name))
                 
