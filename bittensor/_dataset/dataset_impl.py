@@ -254,6 +254,8 @@ class GenesisTextDataset( Dataset ):
         text = None
         file_name = file['Name']
         file_hash = file['Hash']
+        
+
         full_path = os.path.expanduser(os.path.join(self.data_dir, file_name))
 
         # --- Load text from path
@@ -273,6 +275,9 @@ class GenesisTextDataset( Dataset ):
                 logger.warning("Failed to retrieve file, ignoring file:".ljust(20) + "<blue>{}</blue>".format(file_name))
             else:
                 text = response.text
+                print(file_hash)
+                print(file_hash)
+                print(file_hash)
                 logger.success("Downloaded:".ljust(20) + "<blue>{}</blue>".format(file_name))
                 
                 # --- Save text if the save_dataset flag is on.
