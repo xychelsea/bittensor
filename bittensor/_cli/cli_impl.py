@@ -103,20 +103,28 @@ class CLI:
         """
         wallet = bittensor.wallet(config = self.config)
         subtensor = bittensor.subtensor( config = self.config )
+        dendrite = bittensor.dendrite( wallet = wallet )
 
         wallet.hotkey
         wallet.coldkeypub
         
-        with bittensor.__console__.status(":satellite: Syncing with chain: [white]{}[/white] ...".format(self.config.subtensor.network)):
+        with bittensor.__console__.status(":satellite: Looking up account on: [white]{}[/white] ...".format(self.config.subtensor.network)):
             neuron = subtensor.neuron_for_pubkey( ss58_hotkey = wallet.hotkey.ss58_address )
+            endpoint = bittensor.endpoint.from_neuron( neuron )
             if neuron.is_null:
-                registered = 'No'
+                registered = '[bold white]No[/bold white]'
                 stake = bittensor.Balance.from_tao( 0 )
+                emission = bittensor.Balance.from_rao( 0 )
+                latency = 'N/A'
             else:
-                registered = 'Yes'
+                registered = '[bold white]Yes[/bold white]'
                 stake = bittensor.Balance.from_tao( neuron.stake )
+                emission = bittensor.Balance.from_rao( neuron.emission * 1000000000 )
+                _, c, t = dendrite.forward_text( endpoints = endpoint, inputs = 'hello world')
+                latency = "{}".format(t.tolist()[0]) if c.tolist()[0] == 1 else 'N/A'
+
             cold_balance = wallet.balance
-        bittensor.__console__.print("[bold white]{}[/bold white]:\n  [bold grey]coldkey: {}\n  hotkey: {}\n  balance: {}\n  stake: {}\n  registered: {}[/bold grey]".format( wallet, wallet.coldkeypub.ss58_address, wallet.hotkey.ss58_address, cold_balance.__rich__(), stake.__rich__(), registered),highlight=True)
+        bittensor.__console__.print("\n[bold white]{}[/bold white]:\n  [bold grey]{}[bold white]{}[/bold white]\n  {}[bold white]{}[/bold white]\n  {}{}\n  {}{}\n  {}{}\n  {}{}\n  {}{}[/bold grey]".format( wallet, "coldkey:".ljust(15), wallet.coldkeypub.ss58_address, "hotkey:".ljust(15), wallet.hotkey.ss58_address, "registered:".ljust(15), registered, "balance:".ljust(15), cold_balance.__rich__(), "stake:".ljust(15), stake.__rich__(), "emission:".ljust(15), emission.__rich_rao__(), "latency:".ljust(15), latency ), highlight=True)
 
 
     def run_miner ( self ):
@@ -156,6 +164,8 @@ class CLI:
             bittensor.neurons.template_validator.neuron().run()
         elif self.config.model == 'advanced_server':
             bittensor.neurons.advanced_server.neuron().run()
+        elif self.config.model == 'sgmoe_validator':
+            bittensor.neurons.sgmoe_validator.neuron().run()
 
     def register( self ):
         r""" Register neuron.
@@ -198,6 +208,14 @@ class CLI:
             prompt = not self.config.no_prompt 
         )
 
+    def _get_hotkey_wallets_for_wallet( wallet ):
+        hotkey_wallets = []
+        hotkeys_path = wallet.path + '/' + wallet.name + '/hotkeys'
+        hotkey_files = next(os.walk(os.path.expanduser(hotkeys_path)))[2]
+        for hotkey_file_name in hotkey_files:
+            hotkey_wallets.append( bittensor.wallet( path = wallet.path, name = wallet.name, hotkey = hotkey_file_name ))
+        return hotkey_wallets
+
     def list(self):
         r""" Lists wallets.
         """
@@ -234,16 +252,16 @@ class CLI:
         print(root)
 
     def metagraph(self):
-        r""" Prints an overview for the wallet's colkey.
+        r""" Prints an entire metagraph.
         """
         console = bittensor.__console__
         subtensor = bittensor.subtensor( config = self.config )
         metagraph = bittensor.metagraph( subtensor = subtensor )
-        with console.status(":satellite: Syncing with chain: [white]{}[/white] ...".format(self.config.subtensor.network)):
-            metagraph.sync()
-            metagraph.save()
-            issuance = subtensor.total_issuance
-            difficulty = subtensor.difficulty
+        console.print(":satellite: Syncing with chain: [white]{}[/white] ...".format(self.config.subtensor.network))
+        metagraph.sync()
+        metagraph.save()
+        issuance = subtensor.total_issuance
+        difficulty = subtensor.difficulty
 
         TABLE_DATA = [] 
         total_stake = 0.0
@@ -306,7 +324,7 @@ class CLI:
         console.print(table)
 
     def weights(self):
-        r""" Prints an overview for the wallet's colkey.
+        r""" Prints an weights to screen.
         """
         console = bittensor.__console__
         subtensor = bittensor.subtensor( config = self.config )
@@ -346,18 +364,15 @@ class CLI:
         console = bittensor.__console__
         wallet = bittensor.wallet( config = self.config )
         subtensor = bittensor.subtensor( config = self.config )
-        metagraph = bittensor.metagraph( subtensor = subtensor )
+        all_hotkeys = CLI._get_hotkey_wallets_for_wallet( wallet )
+        neurons = []
+        block = subtensor.block
         with console.status(":satellite: Syncing with chain: [white]{}[/white] ...".format(self.config.subtensor.network)):
-            metagraph.load()
-            metagraph.sync()
-            metagraph.save()
+            for wallet in tqdm(all_hotkeys):
+                nn = subtensor.neuron_for_pubkey( wallet.hotkey.ss58_address )
+                if not nn.is_null:
+                    neurons.append( nn )
             balance = subtensor.get_balance( wallet.coldkeypub.ss58_address )
-
-        owned_endpoints = [] 
-        endpoints = metagraph.endpoint_objs
-        for uid, cold in enumerate(metagraph.coldkeys):
-            if cold == wallet.coldkeypub.ss58_address:
-                owned_endpoints.append( endpoints[uid] )
 
         TABLE_DATA = []  
         total_stake = 0.0
@@ -367,19 +382,19 @@ class CLI:
         total_incentive = 0.0
         total_dividends = 0.0
         total_emission = 0     
-        for ep in tqdm(owned_endpoints):
-            uid = ep.uid
-            active = metagraph.active[ uid ].item()
-            stake = metagraph.S[ uid ].item()
-            rank = metagraph.R[ uid ].item()
-            trust = metagraph.T[ uid ].item()
-            consensus = metagraph.C[ uid ].item()
-            incentive = metagraph.I[ uid ].item()
-            dividends = metagraph.D[ uid ].item()
-            emission = int(metagraph.E[ uid ].item() * 1000000000)
-            last_update = int(metagraph.block - metagraph.last_update[ uid ])
+        for nn in tqdm(neurons):
+            uid = nn.uid
+            active = nn.active
+            stake = nn.stake
+            rank = nn.rank
+            trust = nn.trust
+            consensus = nn.consensus
+            incentive = nn.incentive
+            dividends = nn.dividends
+            emission = int(nn.emission * 1000000000)
+            last_update = int(block -  nn.last_update)
             row = [
-                str(ep.uid), 
+                str(uid), 
                 str(active), 
                 '{:.5f}'.format(stake),
                 '{:.5f}'.format(rank), 
@@ -389,8 +404,8 @@ class CLI:
                 '{:.5f}'.format(dividends),
                 '{}'.format(emission),
                 str(last_update),
-                ep.ip + ':' + str(ep.port) if ep.is_serving else '[yellow]none[/yellow]', 
-                ep.hotkey
+                bittensor.utils.networking.int_to_ip( nn.ip) + ':' + str(nn.port) if nn.port != 0 else '[yellow]none[/yellow]', 
+                nn.hotkey
             ]
             total_stake += stake
             total_rank += rank
@@ -401,7 +416,7 @@ class CLI:
             total_emission += emission
             TABLE_DATA.append(row)
             
-        total_neurons = len(owned_endpoints)                
+        total_neurons = len(neurons)                
         table = Table(show_footer=False)
         table.title = (
             "[white]Wallet - {}:{}".format(self.config.wallet.name, wallet.coldkeypub.ss58_address)

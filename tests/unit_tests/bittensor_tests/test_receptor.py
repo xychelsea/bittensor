@@ -4,7 +4,9 @@ import torch
 import bittensor
 from unittest.mock import MagicMock
 import unittest.mock as mock
+import asyncio
 
+logging = bittensor.logging()
 
 wallet =  bittensor.wallet(
     path = '/tmp/pytest',
@@ -112,8 +114,9 @@ def test_receptor_neuron_mock_server():
             hotkey = wallet.hotkey.ss58_address,
             return_code = bittensor.proto.ReturnCode.Success,
             tensors = [y_serialized])
-
-    stub.Forward = MagicMock( return_value=mock_return_val )
+    future = asyncio.Future()
+    future.set_result(mock_return_val)
+    stub.Forward.future = MagicMock( return_value = future )
     receptor.stub = stub
 
     x = torch.rand(3, 3, bittensor.__network_dim__)
@@ -134,7 +137,9 @@ def test_receptor_neuron_serve_timeout():
             return_code = bittensor.proto.ReturnCode.Timeout,
             tensors = [y_serialized])
 
-    stub.Forward = MagicMock( return_value=mock_return_val )
+    future = asyncio.Future()
+    future.set_result(mock_return_val)
+    stub.Forward.future = MagicMock( return_value = future )
     receptor.stub = stub
 
     x = torch.rand(3, 3, bittensor.__network_dim__)
@@ -150,7 +155,9 @@ def test_receptor_neuron_serve_empty():
             return_code = bittensor.proto.ReturnCode.Success,
             tensors = [])
 
-    stub.Forward = MagicMock( return_value=mock_return_val )
+    future = asyncio.Future()
+    future.set_result(mock_return_val)
+    stub.Forward.future = MagicMock( return_value = future )
     receptor.stub = stub
 
     x = torch.rand(3, 3, bittensor.__network_dim__)
@@ -167,7 +174,9 @@ def test_receptor_neuron_mock_server_deserialization_error():
             return_code = bittensor.proto.ReturnCode.Success,
             tensors = [y])
 
-    stub.Forward = MagicMock( return_value=mock_return_val )
+    future = asyncio.Future()
+    future.set_result(mock_return_val)
+    stub.Forward.future = MagicMock( return_value = future )
     receptor.stub = stub
 
     x = torch.rand(3, 3, bittensor.__network_dim__)
@@ -188,7 +197,9 @@ def test_receptor_neuron_mock_server_shape_error():
             return_code = bittensor.proto.ReturnCode.Success,
             tensors = [y_serialized])
 
-    stub.Forward = MagicMock( return_value=mock_return_val )
+    future = asyncio.Future()
+    future.set_result(mock_return_val)
+    stub.Forward.future = MagicMock( return_value = future )
     receptor.stub = stub
 
     x = torch.rand(3, 3, bittensor.__network_dim__)
@@ -211,7 +222,9 @@ def test_receptor_neuron_server_response_with_nans():
             return_code = bittensor.proto.ReturnCode.Success,
             tensors = [y_serialized])
 
-    stub.Forward = MagicMock( return_value=mock_return_val )
+    future = asyncio.Future()
+    future.set_result(mock_return_val)
+    stub.Forward.future = MagicMock( return_value = future )
     receptor.stub = stub
 
     x = torch.rand(3, 3, bittensor.__network_dim__)
@@ -261,8 +274,11 @@ def test_receptor_neuron_backward_empty_response():
             hotkey = wallet.hotkey.public_key,
             return_code = bittensor.proto.ReturnCode.Success,
             tensors = [])
+    
+    future = asyncio.Future()
+    future.set_result(mock_return_val)
+    stub.Backward.future = MagicMock( return_value = future )
 
-    stub.Backward = MagicMock( return_value=mock_return_val )
     receptor.stub = stub
     x = torch.rand(3, 3, bittensor.__network_dim__)
     out, ops, time  = receptor.backward(x,x, bittensor.proto.Modality.TENSOR, timeout=1)
@@ -280,7 +296,9 @@ def test_receptor_neuron_mock_server_backward():
             return_code = bittensor.proto.ReturnCode.Success,
             tensors = [y_serialized])
 
-    stub.Backward = MagicMock( return_value=mock_return_val )
+    future = asyncio.Future()
+    future.set_result(mock_return_val)
+    stub.Backward.future = MagicMock( return_value = future )
     receptor.stub = stub
 
     x = torch.rand(3, 3, bittensor.__network_dim__)
@@ -297,7 +315,9 @@ def test_receptor_neuron_mock_server_deserialization_error_backward():
             return_code = bittensor.proto.ReturnCode.Success,
             tensors = [y])
 
-    stub.Backward = MagicMock( return_value=mock_return_val )
+    future = asyncio.Future()
+    future.set_result(mock_return_val)
+    stub.Backward.future = MagicMock( return_value = future )
     receptor.stub = stub
 
     x = torch.rand(3, 3, bittensor.__network_dim__)
@@ -318,7 +338,9 @@ def test_receptor_neuron_mock_server_shape_error_backward():
             return_code = bittensor.proto.ReturnCode.Success,
             tensors = [y_serialized])
 
-    stub.Backward = MagicMock( return_value=mock_return_val )
+    future = asyncio.Future()
+    future.set_result(mock_return_val)
+    stub.Backward.future = MagicMock( return_value = future )
     receptor.stub = stub
 
     x = torch.rand(3, 3, bittensor.__network_dim__)
@@ -340,7 +362,9 @@ def test_receptor_neuron_server_response_with_nans_backward():
             return_code = bittensor.proto.ReturnCode.Success,
             tensors = [y_serialized])
 
-    stub.Backward = MagicMock( return_value=mock_return_val )
+    future = asyncio.Future()
+    future.set_result(mock_return_val)
+    stub.Backward.future = MagicMock( return_value = future )
     receptor.stub = stub
 
     x = torch.rand(3, 3, bittensor.__network_dim__)
@@ -360,7 +384,9 @@ def test_receptor_forward_no_return():
             hotkey = wallet.hotkey.ss58_address,
             tensors = [y_serialized])
 
-    stub.Forward = MagicMock( return_value=mock_return_val )
+    future = asyncio.Future()
+    future.set_result(mock_return_val)
+    stub.Forward.future = MagicMock( return_value = future )
     receptor.stub = stub
 
     x = torch.rand(3, 3, bittensor.__network_dim__)
@@ -378,7 +404,9 @@ def test_receptor_backward_no_return():
             hotkey = wallet.hotkey.ss58_address,
             tensors = [y_serialized])
 
-    stub.Backward = MagicMock( return_value=mock_return_val )
+    future = asyncio.Future()
+    future.set_result(mock_return_val)
+    stub.Backward.future = MagicMock( return_value = future )
     receptor.stub = stub
 
     x = torch.rand(3, 3, bittensor.__network_dim__)
@@ -399,7 +427,9 @@ def test_receptor_forward_exception():
             return_code = bittensor.proto.ReturnCode.UnknownException,
             tensors = [y_serialized])
 
-    stub.Forward = MagicMock( return_value=mock_return_val )
+    future = asyncio.Future()
+    future.set_result(mock_return_val)
+    stub.Forward.future = MagicMock( return_value = future )
     receptor.stub = stub
 
     x = torch.rand(3, 3, bittensor.__network_dim__)
@@ -418,7 +448,9 @@ def test_receptor_backward_exception():
             return_code = bittensor.proto.ReturnCode.UnknownException,
             tensors = [y_serialized])
 
-    stub.Backward = MagicMock( return_value=mock_return_val )
+    future = asyncio.Future()
+    future.set_result(mock_return_val)
+    stub.Backward.future = MagicMock( return_value = future )
     receptor.stub = stub
 
     x = torch.rand(3, 3, bittensor.__network_dim__)
@@ -484,7 +516,7 @@ def test_axon_receptor_connection_forward_works():
         return torch.zeros( [3, 3, bittensor.__network_dim__])
     axon = bittensor.axon (
         forward_tensor= forward,
-        port = 8080,
+        port = 8081,
         ip = '127.0.0.1',
         wallet = wallet,
     )
@@ -495,7 +527,7 @@ def test_axon_receptor_connection_forward_works():
         uid = 0,
         ip = '127.0.0.1',
         ip_type = 4,
-        port = 8080,
+        port = 8081,
         hotkey = wallet.hotkey.ss58_address,
         coldkey = wallet.coldkey.ss58_address,
         modality = 2
@@ -517,7 +549,7 @@ def test_axon_receptor_connection_forward_unauthenticated():
         return torch.zeros( [3, 3, bittensor.__network_dim__])
     axon = bittensor.axon (
         forward_tensor= forward,
-        port = 8080,
+        port = 8082,
         ip = '127.0.0.1',
         wallet = wallet,
     )
@@ -528,7 +560,7 @@ def test_axon_receptor_connection_forward_unauthenticated():
         uid = 0,
         ip = '127.0.0.1',
         ip_type = 4,
-        port = 8080,
+        port = 8082,
         hotkey = wallet.hotkey.ss58_address,
         coldkey = wallet.coldkey.ss58_address,
         modality = 2
@@ -551,7 +583,7 @@ def test_axon_receptor_connection_backward_works():
         
     axon = bittensor.axon (
         backward_tensor = backward,
-        port = 8080,
+        port = 8083,
         ip = '127.0.0.1',
         wallet = wallet,
     )
@@ -562,7 +594,7 @@ def test_axon_receptor_connection_backward_works():
         uid = 0,
         ip = '127.0.0.1',
         ip_type = 4,
-        port = 8080,
+        port = 8083,
         hotkey = wallet.hotkey.ss58_address,
         coldkey = wallet.coldkey.ss58_address,
         modality = 2
@@ -582,7 +614,7 @@ def test_axon_receptor_connection_backward_unauthenticated():
         return torch.zeros( [3, 3, bittensor.__network_dim__])
     axon = bittensor.axon (
         backward_tensor= backward,
-        port = 8080,
+        port = 8090,
         ip = '127.0.0.1',
         wallet = wallet,
     )
@@ -593,7 +625,7 @@ def test_axon_receptor_connection_backward_unauthenticated():
         uid = 0,
         ip = '127.0.0.1',
         ip_type = 4,
-        port = 8080,
+        port = 8090,
         hotkey = wallet.hotkey.ss58_address,
         coldkey = wallet.coldkey.ss58_address,
         modality = 2
@@ -617,7 +649,7 @@ def test_axon_receptor_connection_forward_unimplemented():
         return torch.zeros( [3, 3, bittensor.__network_dim__])
     axon = bittensor.axon (
         forward_tensor= forward,
-        port = 8080,
+        port = 8085,
         ip = '127.0.0.1',
         wallet = wallet,
     )
@@ -628,7 +660,7 @@ def test_axon_receptor_connection_forward_unimplemented():
         uid = 0,
         ip = '127.0.0.1',
         ip_type = 4,
-        port = 8080,
+        port = 8085,
         hotkey = wallet.hotkey.ss58_address,
         coldkey = wallet.coldkey.ss58_address,
         modality = 2
@@ -650,7 +682,7 @@ def test_axon_receptor_connection_backward_unimplemented():
         return torch.zeros( [3, 3, bittensor.__network_dim__])
     axon = bittensor.axon (
         backward_tensor= backward,
-        port = 8080,
+        port = 8086,
         ip = '127.0.0.1',
         wallet = wallet,
     )
@@ -660,7 +692,7 @@ def test_axon_receptor_connection_backward_unimplemented():
         uid = 0,
         ip = '127.0.0.1',
         ip_type = 4,
-        port = 8080,
+        port = 8086,
         hotkey = wallet.hotkey.ss58_address,
         coldkey = wallet.coldkey.ss58_address,
         modality = 2
@@ -687,7 +719,7 @@ def test_axon_receptor_connection_forward_timeout():
             raise TimeoutError('Timeout')
     axon = bittensor.axon (
         forward_tensor= forward,
-        port = 8080,
+        port = 8087,
         ip = '127.0.0.1',
         wallet = wallet,
     )
@@ -698,7 +730,7 @@ def test_axon_receptor_connection_forward_timeout():
         uid = 0,
         ip = '127.0.0.1',
         ip_type = 4,
-        port = 8080,
+        port = 8087,
         hotkey = wallet.hotkey.ss58_address,
         coldkey = wallet.coldkey.ss58_address,
         modality = 2
@@ -723,7 +755,7 @@ def test_axon_receptor_connection_backward_timeout():
         
     axon = bittensor.axon (
         backward_tensor = backward,
-        port = 8080,
+        port = 8088,
         ip = '127.0.0.1',
         wallet = wallet,
     )
@@ -734,7 +766,7 @@ def test_axon_receptor_connection_backward_timeout():
         uid = 0,
         ip = '127.0.0.1',
         ip_type = 4,
-        port = 8080,
+        port = 8088,
         hotkey = wallet.hotkey.ss58_address,
         coldkey = wallet.coldkey.ss58_address,
         modality = 2
@@ -750,4 +782,5 @@ def test_axon_receptor_connection_backward_timeout():
     axon.stop()
 
 if __name__ == "__main__":
-    test_axon_receptor_connection_backward_timeout()
+    test_axon_receptor_connection_backward_unauthenticated()
+

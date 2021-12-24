@@ -22,6 +22,8 @@ import os
 from typing import List
 from loguru import logger
 
+import wandb
+import pandas
 import torch.nn.functional as f
 import torch
 
@@ -277,11 +279,9 @@ class Metagraph( torch.nn.Module ):
         elif self._endpoint_objs != None:
             return self._endpoint_objs
         else:
+            self._endpoint_objs = []
             for tensor in self.endpoints:
-                try:
-                    obj = bittensor.endpoint.from_tensor( tensor )
-                except Exception:
-                    obj = None
+                obj = bittensor.endpoint.from_tensor( tensor )
                 self._endpoint_objs.append( obj )
             return self._endpoint_objs
 
@@ -382,7 +382,7 @@ class Metagraph( torch.nn.Module ):
         """
         if block == None:
             block = self.subtensor.get_current_block()
-            n_total = self.subtensor.get_n( )
+            n_total = self.subtensor.get_n( block = block )
             neurons = self.subtensor.neurons()
         else:
             n_total = self.subtensor.get_n( block = block )
@@ -476,7 +476,36 @@ class Metagraph( torch.nn.Module ):
             
         # For contructor.
         return self
-    
+
+    def to_dataframe(self):
+        try:
+            index = self.uids.tolist()
+            columns = [ 'active', 'stake', 'rank', 'trust', 'consensus', 'incentive', 'dividends', 'emission']
+            dataframe = pandas.DataFrame(columns = columns, index = index)
+            for uid in self.uids.tolist():
+                dataframe.loc[index] = pandas.Series( {
+                    'active': self.active[uid].item(),             
+                    'stake': self.stake[uid].item(),             
+                    'rank': self.ranks[uid].item(),            
+                    'trust': self.trust[uid].item(),             
+                    'consensus': self.consensus[uid].item(),             
+                    'incentive': self.incentive[uid].item(),             
+                    'dividend': self.dividend[uid].item(),             
+                    'emission': self.emission[uid].item(),          
+                } )
+            return dataframe
+        except Exception as e:
+            bittensor.logging.error('failed metagraph.to_dataframe()', str(e))
+            return pandas.DataFrame()
+
+    def to_wandb(self):
+        wandb_info = {
+            'metagraph_n': self.n.item(),
+            'metagraph_tau': self.tau.item(),
+            'metagraph_block': self.block.item(),
+        }
+        return wandb_info
+            
     def __str__(self):
         return "Metagraph({}, {}, {})".format(self.n.item(), self.block.item(), self.subtensor.network)
         

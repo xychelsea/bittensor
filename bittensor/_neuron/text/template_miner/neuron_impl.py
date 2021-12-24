@@ -23,16 +23,19 @@ Example:
 
 """
 
+import pandas
+from pandas.core.frame import DataFrame
 import bittensor
 import math
 import torch
 import traceback
 import sys
 import wandb
-
 from termcolor import colored
 from qqdm import qqdm, format_str
 from loguru import logger
+
+from bittensor._metagraph import metagraph
 logger = logger.opt(colors=True)
 
 from types import SimpleNamespace
@@ -62,7 +65,7 @@ class Neuron:
         )
         self.device = torch.device( device = self.config.neuron.device )
         self.nucleus = nucleus.to(self.device)
-        self.nucleus.metagraph = self.metagraph
+        self.nucleus.metagraph = self.metagraph_callback
         self.nucleus.dendrite = self.dendrite
         self.optimizer = torch.optim.SGD(
             [ {'params': self.nucleus.peer_weights, 'lr': self.config.neuron.learning_rate_chain} ],
@@ -92,7 +95,6 @@ class Neuron:
     def __enter__(self):
         self.wallet.create()
         self.subtensor.register( self.wallet )
-        self.metagraph.sync().save()
         self.axon.start().serve (
             use_upnpc = self.config.neuron.use_upnpc, 
             subtensor = self.subtensor
@@ -116,11 +118,10 @@ class Neuron:
                 )
 
             # ---- Init run state ----
-            self.epoch = 0            
-            self.stats.ema_scores = torch.nn.Parameter(torch.ones(self.metagraph.n.item()).to(self.device) * (1 / self.metagraph.n.item()), requires_grad = False)
+            self.epoch = 0   
 
             # ---- reloads previous run if not restart ----
-            if self.config.neuron.restart:
+            if self.config.neuron.no_restart:
                 self.save()
 
             try:
@@ -132,10 +133,11 @@ class Neuron:
                 self.reload()
                 self.axon.check()
             
+            self.stats.ema_scores = torch.nn.Parameter(torch.ones(self.metagraph.n.item()).to(self.device) * (1 / self.metagraph.n.item()), requires_grad = False)
+
             # --- Run until n_epochs ----
             while self.epoch < self.config.neuron.n_epochs:
                 try:
-
                     # --- Init epoch stat----
                     self.stats.epoch_data_size = 0
                     self.stats.epoch_sync_count = 0
@@ -156,7 +158,6 @@ class Neuron:
                         # --- Iterate over batches until the end of the block.
                         current_block = self.subtensor.get_current_block()
                         while block >= current_block:
-                            
                             # ---- Forward pass ----
                             inputs = next( self.dataset )
                             output = self.nucleus.remote_forward (
@@ -186,7 +187,7 @@ class Neuron:
                             # ---- Expand ema_scores tensor if the chain grew and aggrigate the score
                             chain_growth = max(scores.shape[0] - self.stats.ema_scores.shape[0], 0)
                             if chain_growth > 0:
-                                self.stats.ema_scores = torch.nn.Parameter(torch.cat( [self.stats.ema_scores, torch.zeros([chain_growth], dtype=torch.float32)]), requires_grad=False)
+                                self.stats.ema_scores = torch.nn.Parameter(torch.cat( [self.stats.ema_scores, torch.zeros([chain_growth], dtype=torch.float32, device = self.device)]), requires_grad=False)
                             self.stats.ema_scores = self.fisher_ema_decay * self.stats.ema_scores + (1 - self.fisher_ema_decay) * scores
                             self.stats.scores = scores
 
@@ -346,7 +347,8 @@ class Neuron:
         
         # --- Loads and syncs metagraph.
         try:
-            self.metagraph.load().sync().save()
+            self.metagraph.sync().save()
+            self.stats.last_sync_block= self.subtensor.get_current_block()
         except Exception as e:
             logger.error('Error in loading metagraph: {}'.format(e))
             self.metagraph.sync().save()
@@ -366,11 +368,17 @@ class Neuron:
             ).to(self.device)
         )
 
-        self.nucleus.load_state_dict( state_dict['nucleus_state'], strict=False )
-        self.nucleus.peer_weights = nn.Parameter(torch.cat([self.nucleus.peer_weights, torch.ones([chain_growth],dtype=torch.float32,requires_grad=True).to(self.device)]))
+        try:
+            self.nucleus.load_state_dict( state_dict['nucleus_state'], strict=False )
+        except Exception as e:
+            logger.exception('Failed to load nucleus state with error, updating the current state')
+            state_dict['nucleus_state'] = self.nucleus.state_dict()
+            torch.save( state_dict, "{}/model.torch".format( self.config.neuron.full_path ) )
+
+        self.nucleus.peer_weights = nn.Parameter(torch.cat([self.nucleus.peer_weights, torch.ones([chain_growth],dtype=torch.float32,requires_grad=True, device = self.device)]))
         self.nucleus.to( self.device ) # Load nucleus
         self.nucleus.dendrite = self.dendrite # Set local dendrite.
-        self.nucleus.metagraph = self.metagraph # Set local metagraph.
+        self.nucleus.metagraph = self.metagraph_callback # Set local metagraph.
         self.optimizer = torch.optim.SGD(
             [{"params": self.nucleus.parameters()}],
             lr = state_dict['optimizer_state']['param_groups'][0]['lr'],
@@ -415,12 +423,15 @@ class Neuron:
         """
 
         try:
-            k = min(self.config.neuron.n_topk_peer_weights, self.metagraph.n.item())
-            topk_scores, topk_uids = torch.topk( self.stats.ema_scores, k = k )
-            did_set = self.subtensor.timeout_set_weights(
+            k = min( self.config.neuron.n_topk_peer_weights, self.metagraph.n.item() )
+            epsilon_scores = self.stats.ema_scores + torch.normal( 0.001, 0.001, size=( self.stats.ema_scores.size() ) )
+            topk_scores, topk_uids = bittensor.unbiased_topk( epsilon_scores, k = k )
+            topk_uids = topk_uids.detach().to('cpu')
+            topk_scores = topk_scores.detach().to('cpu')
+            self.subtensor.timeout_set_weights(
                 timeout = 100,
-                uids = topk_uids.detach().to(torch.device('cpu')),
-                weights = topk_scores.detach().to(torch.device('cpu')),
+                uids = topk_uids,
+                weights = topk_scores,
                 wait_for_inclusion = True,
                 wallet = self.wallet,
             )
@@ -428,15 +439,19 @@ class Neuron:
         except Exception as e:
             logger.error('Failure setting weights on chain with error: {}', e)
 
+    def metagraph_callback(self):
+        return self.metagraph
+
     # ---- Training logs ----
     def logs( self, progress_bar, iteration:int, output: SimpleNamespace ):
         r""" Called after every training step. Displays miner state to screen.
         """
-        self_uid = self.metagraph.hotkey_to_uid(self.wallet.hotkey.ss58_address)
-        stake = self.metagraph.S[ self_uid ].item()
-        rank = self.metagraph.R[ self_uid ].item()
-        incentive = self.metagraph.I[ self_uid ].item()     
-        normalized_peer_weights =  F.softmax (self.nucleus.peer_weights.detach(), dim=0)
+        self_neuron = self.subtensor.neuron_for_pubkey( self.wallet.hotkey.ss58_address )
+        self_uid = self_neuron.uid
+        stake = self_neuron.stake
+        rank = self_neuron.rank
+        incentive = self_neuron.incentive
+        normalized_peer_weights = F.softmax (self.nucleus.peer_weights.detach(), dim=0)
         current_block = self.subtensor.get_current_block()
 
         # ---- Progress bar log
@@ -456,41 +471,43 @@ class Neuron:
             'Synced Block': colored('{}'.format(self.stats.last_sync_block), 'yellow'),
         }
         # ---- Miner summary per peer for progress bar
-        topk_scores, topk_idx = torch.topk(self.stats.ema_scores, 5, dim=0)
-
-        for uid, ema_score in zip(topk_idx, topk_scores) :
+        k = min( self.config.neuron.n_topk_peer_weights, self.metagraph.n.item() )
+        topk_scores, topk_uids = bittensor.unbiased_topk( self.stats.ema_scores, k, dim=0 )
+        for uid, ema_score in zip( topk_uids, topk_scores ) :
             color =  'green' if self.stats.scores[uid] - ema_score > 0 else 'red'
             info[f'uid_{uid.item()}'] = colored('{:.4f}'.format(ema_score), color)
 
         progress_bar.set_infos( info )
 
         # ---- wandb log if it is the end of epoch 
-        if  self.config.neuron.use_wandb and ((iteration + 1) % (self.config.neuron.epoch_length ) == 0):
+        if self.config.neuron.use_wandb and ((iteration + 1) % (self.config.neuron.epoch_length ) == 0):
             # ---- Miner summary for wandb
             wandb_info = {
-                'stake':stake,
-                'rank':rank,
-                'incentive':incentive,
-                'num_peers':self.metagraph.n.item(),
-                'remote_target_epoch_loss': self.stats.remote_target_epoch_loss,
-                'distillation_epoch_loss': self.stats.distillation_epoch_loss,
-                'local_target_epoch_loss': self.stats.local_target_epoch_loss,
-                'local_epoch_acc': self.stats.local_epoch_acc,
-                'num_sync_metagraph': self.stats.epoch_sync_count,
-                'data_size': self.stats.epoch_data_size,
-                }
-            # ---- Miner summary per peer
-            for uid in self.metagraph.uids.tolist():
-                uid_str = str(uid).zfill(3)
-                wandb_info[f'peers_norm_weight uid: {uid_str}']= normalized_peer_weights[uid]
-                wandb_info[f'peers_wo_norm_weight uid: {uid_str}']= self.nucleus.peer_weights[uid]
-                wandb_info[f'fisher_ema uid: {uid_str}'] = self.stats.ema_scores[uid]
+                'neuron/stake':stake,
+                'neuron/rank':rank,
+                'neuron/incentive':incentive,
+                'neuron/num_peers':self.metagraph.n.item(),
+                'nucleus/remote_target_epoch_loss': self.stats.remote_target_epoch_loss,
+                'nucleus/distillation_epoch_loss': self.stats.distillation_epoch_loss,
+                'nucleus/local_target_epoch_loss': self.stats.local_target_epoch_loss,
+                'nucleus/local_epoch_acc': self.stats.local_epoch_acc,
+                'neuron/num_sync_metagraph': self.stats.epoch_sync_count,
+                'neuron/data_size': self.stats.epoch_data_size,
+            }
+
+            # Build stats dataframe.
+            df = pandas.concat( [
+                bittensor.utils.indexed_values_to_dataframe( prefix = 'fisher_ema_score', index = topk_uids, values = self.stats.ema_scores, filter_zeros = True),
+                bittensor.utils.indexed_values_to_dataframe( prefix = 'raw_peer_weight', index = topk_uids, values = self.nucleus.peer_weights, filter_zeros = True),
+                bittensor.utils.indexed_values_to_dataframe( prefix = 'normalized_peer_weight', index = topk_uids, values = normalized_peer_weights, filter_zeros = True),
+                bittensor.utils.indexed_values_to_dataframe( prefix = 'w_{}_i'.format(self_uid), index = topk_uids, values = self.metagraph.W[ self_uid, : ], filter_zeros = True),
+                bittensor.utils.indexed_values_to_dataframe( prefix = 'w_i_{}'.format(self_uid), index = topk_uids, values = self.metagraph.W[ :, self_uid ], filter_zeros = True),
+                self.axon.to_dataframe( metagraph = self.metagraph ),
+                self.dendrite.to_dataframe( metagraph = self.metagraph )
+            ], axis = 1)
+            df['uid'] = df.index
 
             wandb_info_axon = self.axon.to_wandb()
             wandb_info_dend = self.dendrite.to_wandb()
-                
-            try:
-                wandb.log({**wandb_info, **wandb_info_axon, **wandb_info_dend})
-            except Exception as e:
-                logger.warning('Failed to update weights and biases with error:{}', e)
-
+            wandb.log( { **wandb_info, **wandb_info_axon, **wandb_info_dend }, step = current_block)
+            wandb.log( { 'stats': wandb.Table( dataframe = df)}, step = current_block)

@@ -26,7 +26,9 @@ import sys
 import torch
 import time
 import wandb
+import pandas
 import datetime
+from threading import Lock
 
 def serve( config, server ):
     config.to_defaults()
@@ -49,9 +51,10 @@ def serve( config, server ):
     # Create our optimizer.
     optimizer = torch.optim.SGD(
         [ {"params": model.parameters()} ],
-        lr = config.server.learning_rate,
-        momentum = config.server.momentum,
+        lr = config.neuron.learning_rate,
+        momentum = config.neuron.momentum,
     )
+    mutex = Lock()
 
     def forward_text ( inputs_x ):
         r""" Single threaded version of the Forward function that is called when the axon recieves a forward request from other peers
@@ -63,15 +66,16 @@ def serve( config, server ):
         r"""Single threaded backwards function that is called when the axon recieves a backwards request from other peers.
             Updates the server parameters with gradients through the chain.             
         """
-        with torch.enable_grad():
-            with torch.autograd.set_detect_anomaly(True):
-                outputs_y = model.encode_forward( inputs_x )
-                torch.autograd.backward (
-                    tensors = [ outputs_y ],
-                    grad_tensors = [ grads_dy ]
-                    )
-                optimizer.step()
-                optimizer.zero_grad()
+        with mutex:
+            with torch.enable_grad():
+                with torch.autograd.set_detect_anomaly(True):
+                    outputs_y = model.encode_forward( inputs_x )
+                    torch.autograd.backward (
+                        tensors = [ outputs_y ],
+                        grad_tensors = [ grads_dy ]
+                        )
+                    optimizer.step()
+                    optimizer.zero_grad()
 
     # Create our axon server and subscribe it to the network.
     axon = bittensor.axon (
@@ -86,25 +90,43 @@ def serve( config, server ):
             config = config,
             cold_pubkey = wallet.coldkeypub.ss58_address,
             hot_pubkey = wallet.hotkey.ss58_address,
-            root_dir = config.server.full_path
+            root_dir = config.neuron.full_path
         )
 
     # --- Run Forever.
     while True:
-        end_block = subtensor.get_current_block() + config.server.blocks_per_epoch
-        while end_block >= subtensor.get_current_block():
+        
+        current_block = subtensor.get_current_block()
+        end_block = current_block + config.neuron.blocks_per_epoch
+        while end_block >= current_block:
             time.sleep( bittensor.__blocktime__ )
+            current_block = subtensor.get_current_block()
+
         metagraph.sync().save()
-        uid = metagraph.hotkeys.index( wallet.hotkey.ss58_address )
-        wandb_data = {
-            'stake': metagraph.S[ uid ].item(),
-            'rank': metagraph.R[ uid ].item(),
-            'incentive': metagraph.I[ uid ].item(),
-            'axon QPS': axon.stats.qps.value
-        } 
-        for uid_i, val in enumerate(metagraph.W[:,uid].tolist()):
-            wandb_data[ 'w_{},{}'.format(uid_i, uid) ] = val
+        my_uid = metagraph.hotkeys.index( wallet.hotkey.ss58_address )
+       
         if config.wandb.api_key != 'default':
-            wandb.log( wandb_data )
+            wandb_data = {
+                'stake': metagraph.S[ my_uid ].item(),
+                'rank': metagraph.R[ my_uid ].item(),
+                'trust': metagraph.I[ my_uid ].item(),
+                'consensus': metagraph.C[ my_uid ].item(),
+                'incentive': metagraph.I[ my_uid ].item(),
+                'emission': metagraph.E[ my_uid ].item(),
+            } 
+            df = pandas.concat( [
+                bittensor.utils.indexed_values_to_dataframe( prefix = 'w_i_{}'.format(nn.uid), index = metagraph.uids, values = metagraph.W[:, uid] ),
+                axon.to_dataframe( metagraph = metagraph ),
+            ], axis = 1)
+            df['uid'] = df.index
+            wandb_info_axon = axon.to_wandb()                
+            wandb.log( { **wandb_data, **wandb_info_axon }, step = current_block )
+            wandb.log( { 'stats': wandb.Table( dataframe = df ) }, step = current_block )
+
+            for uid_i, val in enumerate(metagraph.W[:,my_uid].tolist()):
+                if uid_i > 0:
+                    wandb_data[ '{}/w_{}_{}'.format(uid_i, uid_i, my_uid) ] = val
+            axon_wandb = axon.to_wandb( metagraph )
+            wandb.log( { **wandb_data, **axon_wandb } )
 
         

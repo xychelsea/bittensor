@@ -18,7 +18,7 @@
 from rich.console import Console
 
 # Bittensor code and protocol version.
-__version__ = '2.0.2'
+__version__ = '2.0.3'
 version_split = __version__.split(".")
 __version_as_int__ = (100 * int(version_split[0])) + (10 * int(version_split[1])) + (1 * int(version_split[2]))
 
@@ -37,6 +37,8 @@ __network_dim__ = 1024 # All network responses have shape = [ __batch_size__, __
 __blocktime__ = 12
 
 __networks__ = [ 'local', 'nobunaga', 'akatsuki', 'nakamoto']
+
+__datasets__ = ['ArXiv', 'BookCorpus2', 'Books3', 'DMMathematics', 'EnronEmails', 'EuroParl', 'Gutenberg_PG', 'HackerNews', 'NIHExPorter', 'OpenSubtitles', 'PhilPapers', 'UbuntuIRC', 'YoutubeSubtitles']
 
 __nakamoto_entrypoints__ = [
     "entrypointnetworkloadbalancer-21fe5fbdc08425ca.elb.us-east-2.amazonaws.com:9944"
@@ -70,6 +72,9 @@ import bittensor._proto.bittensor_pb2_grpc as grpc
 
 # ---- Neurons ----
 import bittensor._neuron as neurons
+
+# ---- Utils ----
+from bittensor.utils import unbiased_topk as unbiased_topk
 
 # ---- Factories -----
 from bittensor.utils.balance import Balance as Balance
