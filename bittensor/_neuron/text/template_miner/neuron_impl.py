@@ -150,7 +150,7 @@ class Neuron:
         """
         self.init_bit()
         self.init_process(rank)
-        nucleus_ddp = DDP(self.nucleus, find_unused_parameters=False) # , device_ids = rank
+        nucleus_ddp = DDP(self.nucleus) # , device_ids = rank
 
         # ---- Build Bittensor neuron ----
         with self:
@@ -212,25 +212,33 @@ class Neuron:
 
                             # ---- Backward pass ----
                             output.loss = output.local_target_loss + output.distillation_loss + output.remote_target_loss
-                            output.loss.backward(retain_graph = True) # Accumulates gradients on the nucleus.
+
+                            print(f"{rank, output.loss, output.loss.grad_fn.__dir__()}")
+                            print(f"{rank, output.loss, output.loss.grad_fn.next_functions}")
+                            
+                            dist.barrier()
+                            output.loss.backward() # Accumulates gradients on the nucleus.
+                            
+                            for name, p in nucleus_ddp.named_parameters():
+                                if ('peer_weight' in name) or ('embedding.weight' in name): 
+                                    try:
+                                        bittensor.logging.success(f"{rank, name, p.grad}", sufix = "")
+                                    except Exception as e:
+                                        bittensor.logging.success(f"{rank, name}", sufix = f"FAILED {e}")
+                                        pass
+                            
                             bittensor.logging.success( prefix = f'Backward pass', sufix = f'batches_count {batches_count}, Rank {rank}')
                             clip_grad_norm_(nucleus_ddp.parameters(), self.config.neuron.clip_gradients)
-                            
-                            # for name, p in nucleus_ddp.named_parameters():
-                            #     try:
-                            #         bittensor.logging.success(f"{rank, name, sum(torch.isnan(p.grad))}", sufix = "")
-                            #     except Exception as e:
-                            #         bittensor.logging.success(f"{rank, name}", sufix = f"FAILED {e}")
-                            #         pass
+                            bittensor.logging.success( prefix = f'Backward pass, clip norm', sufix = f'batches_count {batches_count}, Rank {rank}')
                             
                             # ---- Apply and zero accumulated gradients.
                             self.optimizer.step() 
+                            bittensor.logging.success( prefix = f'Optimizer pass, step', sufix = f'batches_count {batches_count}, Rank {rank}')
                             self.optimizer.zero_grad()
-                            bittensor.logging.success( prefix = f'Optimizer pass', sufix = f'batches_count {batches_count}, Rank {rank}')
-                            bittensor.logging.success( prefix = f'Optimizer pass', sufix = f'batches_count {batches_count}, Rank {rank}')
-                            bittensor.logging.success( prefix = f'Optimizer pass', sufix = f'batches_count {batches_count}, Rank {rank}')
-                            bittensor.logging.success( prefix = f'Optimizer pass', sufix = f'batches_count {batches_count}, Rank {rank}')
-                            bittensor.logging.success( prefix = f'Optimizer pass', sufix = f'batches_count {batches_count}, Rank {rank}')
+                            bittensor.logging.success( prefix = f'Optimizer pass, zero grad', sufix = f'batches_count {batches_count}, Rank {rank}')
+                            bittensor.logging.success( prefix = f'Optimizer pass, zero grad', sufix = f'batches_count {batches_count}, Rank {rank}')
+                            bittensor.logging.success( prefix = f'Optimizer pass, zero grad', sufix = f'batches_count {batches_count}, Rank {rank}')
+                            bittensor.logging.success( prefix = f'Optimizer pass, zero grad', sufix = f'batches_count {batches_count}, Rank {rank}')
                             current_block = self.subtensor.get_current_block()
                             
                     #         # ---- Aggrigate outputs and losses 
@@ -420,7 +428,7 @@ class Neuron:
         self.stats.global_step = state_dict['global_step']
 
         # --- Updates the shape of nucleus chain weights
-        chain_growth = max(0, self.metagraph.n.item() - state_dict['nucleus_state']['peer_weights'].shape[0])
+        # chain_growth = max(0, self.metagraph.n.item() - state_dict['nucleus_state']['peer_weights'].shape[0])
         # self.nucleus.peer_weights = nn.Parameter(
         #     torch.ones(
         #         list(state_dict['nucleus_state']['peer_weights'].shape),
@@ -450,11 +458,11 @@ class Neuron:
         """ Miner sync with metagraph and update chain weight
         """
         # ---- Set weights on chain ----
-        self.set_peer_weights()
+        # self.set_peer_weights()
 
         # ---- Sync with metagraph ----
         self.metagraph.sync().save()
-        chain_growth = max(self.metagraph.n.item()- self.nucleus.peer_weights.shape[0], 0)
+        chain_growth = max(self.metagraph.n.item()- self.nucleus.scores.shape[0], 0)
         # self.nucleus.peer_weights = nn.Parameter(torch.cat([self.nucleus.peer_weights, torch.ones([chain_growth],dtype=torch.float32,requires_grad=True).to(self.device)]))
         self.stats.scores = torch.nn.Parameter(torch.cat( [self.stats.scores, torch.zeros([chain_growth], dtype=torch.float32, requires_grad=False).to(self.device)]))
         self.stats.ema_scores = torch.nn.Parameter(torch.cat( [self.stats.ema_scores, torch.zeros([chain_growth], dtype=torch.float32, requires_grad=False).to(self.device)]))
