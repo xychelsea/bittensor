@@ -570,6 +570,8 @@ class Receptor(nn.Module):
                 request: (:obj:`Request`, required):
                     The request object holds all specifications and processing of the request.
         """
+        if backward == True:
+            bittensor.logging.success(f"receptor backward", sufix = "")
         # ---- Setup forward request namespace, which will hold all the objects regarding the forward request ----
         request = Request(inputs = inputs, modality = modality, grads_dy = grads_dy, backward = backward)
 

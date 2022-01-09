@@ -204,6 +204,7 @@ class Neuron:
                         # --- Iterate over batches until the end of the block.
                         current_block = self.subtensor.get_current_block()
                         while block >= current_block:
+                            bittensor.logging.success( prefix = f'start', sufix = f'batches_count {batches_count}, Rank {rank}')
                             # ---- Forward pass ----
                             inputs = next( self.dataset )
                             output = nucleus_ddp.forward(
@@ -217,17 +218,24 @@ class Neuron:
 
                             print(f"{rank, output.loss, output.loss.grad_fn.__dir__()}")
                             print(f"{rank, output.loss, output.loss.grad_fn.next_functions}")
-                            
                             dist.barrier()
-                            output.loss.backward() # Accumulates gradients on the nucleus.
-                            
                             for name, p in nucleus_ddp.named_parameters():
                                 if ('peer_weight' in name) or ('embedding.weight' in name): 
                                     try:
-                                        bittensor.logging.success(f"{rank, name, p.grad}", sufix = "")
+                                        bittensor.logging.success(f"{rank, name, p.requires_grad}", sufix = "")
                                         if p.grad == None:
                                             p.grad = torch.zeros_like(p)
-                                            bittensor.logging.success(f"revived none", sufix = f"{p.grad}")
+                                    except Exception as e:
+                                        bittensor.logging.success(f"{rank, name}", sufix = f"FAILED {e}")
+                                        pass 
+                            output.loss.backward() # Accumulates gradients on the nucleus.
+                            
+                            for name, p in nucleus_ddp.named_parameters():
+                                if p.grad == None: 
+                                    try:
+                                        bittensor.logging.success(f"{rank, name, p.grad}", sufix = "")
+                                        p.grad = torch.zeros_like(p)
+                                        bittensor.logging.success(f"revived none", sufix = f"{rank, name, p.grad}")
                                     except Exception as e:
                                         bittensor.logging.success(f"{rank, name}", sufix = f"FAILED {e}")
                                         pass
@@ -235,6 +243,7 @@ class Neuron:
                             clip_grad_norm_(nucleus_ddp.parameters(), self.config.neuron.clip_gradients)
                             bittensor.logging.success( prefix = f'Backward pass, clip norm', sufix = f'batches_count {batches_count}, Rank {rank}')
                             
+                            dist.barrier()
                             # ---- Apply and zero accumulated gradients.
                             self.optimizer.step() 
                             bittensor.logging.success( prefix = f'Optimizer pass, step', sufix = f'batches_count {batches_count}, Rank {rank}')
@@ -294,6 +303,7 @@ class Neuron:
 
                 except KeyboardInterrupt:
                     # --- User ended session ----
+                    self.cleanup()
                     break
 
                 except Exception as e:
