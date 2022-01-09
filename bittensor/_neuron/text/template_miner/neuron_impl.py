@@ -48,6 +48,7 @@ from functools import partial
 
 import torch.nn.functional as F
 
+
 class Neuron:
 
     def __init__( self, config: 'bittensor.config', nucleus: 'Nucleus'):
@@ -126,10 +127,10 @@ class Neuron:
              join=True
         )
 
-    def init_bit(self):
+    def init_bit(self, rank):
         self.subtensor = bittensor.subtensor ( config = self.config )
         self.metagraph = bittensor.metagraph ( config = self.config, subtensor = self.subtensor )
-        self.dendrite = bittensor.dendrite ( config = self.config, wallet = self.wallet )
+        self.dendrite = bittensor.dendrite ( config = self.config, wallet = self.wallet, rank = rank )
         self.dataset = bittensor.dataset ( config = self.config, world_size = self.world_size )
         self.axon = bittensor.axon (
             config = self.config,
@@ -148,9 +149,10 @@ class Neuron:
     def run( self, rank = 0, what = 1):
         r""" Miner main loop.
         """
-        self.init_bit()
         self.init_process(rank)
+        self.init_bit(rank)
         nucleus_ddp = DDP(self.nucleus) # , device_ids = rank
+        bittensor.logging.success( prefix = f'PID', sufix = f'Rank {rank, os.getpid()}')
 
         # ---- Build Bittensor neuron ----
         with self:
@@ -223,10 +225,12 @@ class Neuron:
                                 if ('peer_weight' in name) or ('embedding.weight' in name): 
                                     try:
                                         bittensor.logging.success(f"{rank, name, p.grad}", sufix = "")
+                                        if p.grad == None:
+                                            p.grad = torch.zeros_like(p)
+                                            bittensor.logging.success(f"revived none", sufix = f"{p.grad}")
                                     except Exception as e:
                                         bittensor.logging.success(f"{rank, name}", sufix = f"FAILED {e}")
                                         pass
-                            
                             bittensor.logging.success( prefix = f'Backward pass', sufix = f'batches_count {batches_count}, Rank {rank}')
                             clip_grad_norm_(nucleus_ddp.parameters(), self.config.neuron.clip_gradients)
                             bittensor.logging.success( prefix = f'Backward pass, clip norm', sufix = f'batches_count {batches_count}, Rank {rank}')

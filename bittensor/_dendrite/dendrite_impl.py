@@ -73,6 +73,7 @@ class Dendrite(torch.autograd.Function):
             wallet: 'bittensor.Wallet',
             receptor_pool: 'bittensor.ReceptorPool',
             manager: 'BaseManager',
+            rank: int
     ):
         r""" Initializes a new Dendrite entry point.
             Args:
@@ -87,6 +88,7 @@ class Dendrite(torch.autograd.Function):
         # ---- Dendrite stats
         # num of time we have sent request to a peer, received successful respond, and the respond time
         self.stats = self._init_stats()
+        self.rank = rank
 
     def __str__(self):
         return "Dendrite({}, {})".format(self.wallet.hotkey.ss58_address, self.receptor_pool)
@@ -243,6 +245,7 @@ class Dendrite(torch.autograd.Function):
                     times per call.
 
         """
+        bittensor.logging.success(f"{self.rank}", sufix = f"{[x.uid for x in endpoints]}")
         timeout = timeout if timeout is not None else self.config.dendrite.timeout
         requires_grad = requires_grad if requires_grad is not None else self.config.dendrite.requires_grad
         forward_response = Dendrite.apply(

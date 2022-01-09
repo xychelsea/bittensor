@@ -1,0 +1,99 @@
+2022-01-07 17:57:56.250 |     SUCCESS      | Loaded dataset:     Books3
+2022-01-07 17:57:56.419 |     SUCCESS      | Loaded dataset:     Books3
+2022-01-07 17:57:56.969 |     SUCCESS      | Downloaded:         04-Books3-13668.txt
+2022-01-07 17:57:57.238 |     SUCCESS      | Downloaded:         20-Books3-12649.txt
+2022-01-07 17:57:58.981 |     Connect      | uid: 9   |  /ipv4/137.184.210.226:8091 | hotkey:5GjduF5WSYryD4rbDM7vEUq8nEZ6USgt7tFi16QB9adR6uVz | coldkey:5CfLWvke8fZJfF3iZifHvZFiu5skDNbbzSmR9gUoVgrek9D6 
+2022-01-07 17:57:58.984 |     Connect      | uid: 10  |   /ipv4/74.14.27.128:8091   | hotkey:5GerdDWxQjgReFN4QPfQWbJ56WdeWaiAvPFp1jn84mkZqZQV | coldkey:5CJHPmqij4S8yj3vEfECqNSAemkRk3zSAkWeLwyMWFTLU58F 
+2022-01-07 17:57:58.984 |     Connect      | uid: 4   |  /ipv4/137.184.65.108:8091  | hotkey:5HTcjxbLACuo38sHhPr5fSUM27yS84kv2PTgZpTLHZYb32RF | coldkey:5CfLWvke8fZJfF3iZifHvZFiu5skDNbbzSmR9gUoVgrek9D6 
+2022-01-07 17:57:58.984 |     Connect      | uid: 8   |  /ipv4/137.184.207.159:8091 | hotkey:5CMDwojhYgog4Hswn1ijfRvn6wSHa54g4onYd6tY3HvPX1th | coldkey:5CfLWvke8fZJfF3iZifHvZFiu5skDNbbzSmR9gUoVgrek9D6 
+2022-01-07 17:57:58.984 |     Connect      | uid: 7   |  /ipv4/137.184.99.137:8091  | hotkey:5DsxDtViMyYC493LiPzoWHasN9KGrJnjZPden8iq7ADMoRW8 | coldkey:5CfLWvke8fZJfF3iZifHvZFiu5skDNbbzSmR9gUoVgrek9D6 
+2022-01-07 17:57:58.985 |     Connect      | uid: 0   |   /ipv4/161.35.97.227:8091  | hotkey:5HNEAb7LxME2ei1JuW2Aw9kUra2sSydG7qfgJMGhKBke4cUW | coldkey:5CfLWvke8fZJfF3iZifHvZFiu5skDNbbzSmR9gUoVgrek9D6 
+2022-01-07 17:57:58.985 |     Connect      | uid: 2   |  /ipv4/137.184.220.118:8091 | hotkey:5F4e8Fk6NWPa95fvaaAk6nkFFbbjXAVXQV2ka1qSUq8JYFKp | coldkey:5CfLWvke8fZJfF3iZifHvZFiu5skDNbbzSmR9gUoVgrek9D6 
+2022-01-07 17:57:58.985 |     Connect      | uid: 23  |   /ipv4/66.32.20.174:8091   | hotkey:5FCKmowy45aQoSHm3d97kAfJ23HQZCYtsweb2bT32b26EVPF | coldkey:5FCFKszbuMgrdxbMuPkbyGXkFR7gSGHHzxV7rH9BrrtZwwv2 
+2022-01-07 17:57:59.038 |     Success      | Dendrite | Forward  | ---> |   9   |     [10, 20]    | 0.03s  | 5GjduF5WSYryD4rbDM7vEUq8nEZ6USgt7tFi16QB9adR6uVz | None 
+2022-01-07 17:57:59.039 |     Success      | Dendrite | Forward  | ---> |   10  |     [10, 20]    | 0.03s  | 5GerdDWxQjgReFN4QPfQWbJ56WdeWaiAvPFp1jn84mkZqZQV | None 
+2022-01-07 17:57:59.040 |     Success      | Dendrite | Forward  | ---> |   4   |     [10, 20]    | 0.03s  | 5HTcjxbLACuo38sHhPr5fSUM27yS84kv2PTgZpTLHZYb32RF | None 
+2022-01-07 17:57:59.041 |     Success      | Dendrite | Forward  | ---> |   8   |     [10, 20]    | 0.03s  | 5CMDwojhYgog4Hswn1ijfRvn6wSHa54g4onYd6tY3HvPX1th | None 
+2022-01-07 17:57:59.041 |     Success      | Dendrite | Forward  | ---> |   7   |     [10, 20]    | 0.03s  | 5DsxDtViMyYC493LiPzoWHasN9KGrJnjZPden8iq7ADMoRW8 | None 
+2022-01-07 17:57:59.042 |     Success      | Dendrite | Forward  | ---> |   0   |     [10, 20]    | 0.03s  | 5HNEAb7LxME2ei1JuW2Aw9kUra2sSydG7qfgJMGhKBke4cUW | None 
+2022-01-07 17:57:59.043 |     Success      | Dendrite | Forward  | ---> |   2   |     [10, 20]    | 0.03s  | 5F4e8Fk6NWPa95fvaaAk6nkFFbbjXAVXQV2ka1qSUq8JYFKp | None 
+2022-01-07 17:57:59.044 |     Success      | Dendrite | Forward  | ---> |   23  |     [10, 20]    | 0.03s  | 5FCKmowy45aQoSHm3d97kAfJ23HQZCYtsweb2bT32b26EVPF | None 
+2022-01-07 17:57:59.046 |     Success      | Dendrite | Forward  | ---> |   2   |     [10, 20]    | 0.00s  | 5F4e8Fk6NWPa95fvaaAk6nkFFbbjXAVXQV2ka1qSUq8JYFKp | None 
+2022-01-07 17:57:59.047 |     Success      | Dendrite | Forward  | ---> |   0   |     [10, 20]    | 0.00s  | 5HNEAb7LxME2ei1JuW2Aw9kUra2sSydG7qfgJMGhKBke4cUW | None 
+2022-01-07 17:57:59.047 |     Success      | Dendrite | Forward  | ---> |   8   |     [10, 20]    | 0.00s  | 5CMDwojhYgog4Hswn1ijfRvn6wSHa54g4onYd6tY3HvPX1th | None 
+2022-01-07 17:57:59.047 |     Success      | Dendrite | Forward  | ---> |   9   |     [10, 20]    | 0.00s  | 5GjduF5WSYryD4rbDM7vEUq8nEZ6USgt7tFi16QB9adR6uVz | None 
+2022-01-07 17:57:59.047 |     Success      | Dendrite | Forward  | ---> |   4   |     [10, 20]    | 0.00s  | 5HTcjxbLACuo38sHhPr5fSUM27yS84kv2PTgZpTLHZYb32RF | None 
+2022-01-07 17:57:59.048 |     Success      | Dendrite | Forward  | ---> |   23  |     [10, 20]    | 0.00s  | 5FCKmowy45aQoSHm3d97kAfJ23HQZCYtsweb2bT32b26EVPF | None 
+2022-01-07 17:57:59.048 |     Success      | Dendrite | Forward  | ---> |   7   |     [10, 20]    | 0.00s  | 5DsxDtViMyYC493LiPzoWHasN9KGrJnjZPden8iq7ADMoRW8 | None 
+2022-01-07 17:57:59.048 |     Success      | Dendrite | Forward  | ---> |   10  |     [10, 20]    | 0.00s  | 5GerdDWxQjgReFN4QPfQWbJ56WdeWaiAvPFp1jn84mkZqZQV | None 
+2022-01-07 17:57:59.136 |   UnknownCode    | Dendrite | Forward  | <--- |   0   |       [x]       | 0.13s  | 5HNEAb7LxME2ei1JuW2Aw9kUra2sSydG7qfgJMGhKBke4cUW | grpc.StatusCode.UNAUTHENTICATED: Incorrect Signature 
+2022-01-07 17:57:59.159 |   UnknownCode    | Dendrite | Forward  | <--- |   4   |       [x]       | 0.15s  | 5HTcjxbLACuo38sHhPr5fSUM27yS84kv2PTgZpTLHZYb32RF | grpc.StatusCode.UNAUTHENTICATED: Incorrect Signature 
+2022-01-07 17:57:59.160 |   UnknownCode    | Dendrite | Forward  | <--- |   2   |       [x]       | 0.15s  | 5F4e8Fk6NWPa95fvaaAk6nkFFbbjXAVXQV2ka1qSUq8JYFKp | grpc.StatusCode.UNAUTHENTICATED: Incorrect Signature 
+2022-01-07 17:57:59.161 |   UnknownCode    | Dendrite | Forward  | <--- |   8   |       [x]       | 0.15s  | 5CMDwojhYgog4Hswn1ijfRvn6wSHa54g4onYd6tY3HvPX1th | grpc.StatusCode.UNAUTHENTICATED: Incorrect Signature 
+2022-01-07 17:57:59.163 |   UnknownCode    | Dendrite | Forward  | <--- |   7   |       [x]       | 0.15s  | 5DsxDtViMyYC493LiPzoWHasN9KGrJnjZPden8iq7ADMoRW8 | grpc.StatusCode.UNAUTHENTICATED: Incorrect Signature 
+2022-01-07 17:57:59.173 |   UnknownCode    | Dendrite | Forward  | <--- |   9   |       [x]       | 0.16s  | 5GjduF5WSYryD4rbDM7vEUq8nEZ6USgt7tFi16QB9adR6uVz | grpc.StatusCode.UNAUTHENTICATED: Incorrect Signature 
+2022-01-07 17:57:59.173 |   UnknownCode    | Dendrite | Forward  | <--- |   9   |       [x]       | 0.16s  | 5GjduF5WSYryD4rbDM7vEUq8nEZ6USgt7tFi16QB9adR6uVz | grpc.StatusCode.UNAUTHENTICATED: Incorrect Signature 
+2022-01-07 17:57:59.910 |     Success      | Dendrite | Forward  | <--- |   7   |  [10, 20, 1024] | 0.86s  | 5DsxDtViMyYC493LiPzoWHasN9KGrJnjZPden8iq7ADMoRW8 | Success 
+2022-01-07 17:58:00.253 |     Success      | Dendrite | Forward  | <--- |   2   |  [10, 20, 1024] | 1.21s  | 5F4e8Fk6NWPa95fvaaAk6nkFFbbjXAVXQV2ka1qSUq8JYFKp | Success 
+2022-01-07 17:58:00.254 |     Success      | Dendrite | Forward  | <--- |   2   |  [10, 20, 1024] | 1.21s  | 5F4e8Fk6NWPa95fvaaAk6nkFFbbjXAVXQV2ka1qSUq8JYFKp | Success 
+2022-01-07 17:58:00.511 |     Success      | Dendrite | Forward  | <--- |   0   |  [10, 20, 1024] | 1.47s  | 5HNEAb7LxME2ei1JuW2Aw9kUra2sSydG7qfgJMGhKBke4cUW | Success 
+2022-01-07 17:58:00.512 |     Success      | Dendrite | Forward  | <--- |   0   |  [10, 20, 1024] | 1.47s  | 5HNEAb7LxME2ei1JuW2Aw9kUra2sSydG7qfgJMGhKBke4cUW | Success 
+2022-01-07 17:58:00.540 |     Success      | Dendrite | Forward  | <--- |   8   |  [10, 20, 1024] | 1.49s  | 5CMDwojhYgog4Hswn1ijfRvn6wSHa54g4onYd6tY3HvPX1th | Success 
+2022-01-07 17:58:00.540 |     Success      | Dendrite | Forward  | <--- |   8   |  [10, 20, 1024] | 1.49s  | 5CMDwojhYgog4Hswn1ijfRvn6wSHa54g4onYd6tY3HvPX1th | Success 
+2022-01-07 17:58:00.901 |     Success      | Dendrite | Forward  | <--- |   4   |  [10, 20, 1024] | 1.86s  | 5HTcjxbLACuo38sHhPr5fSUM27yS84kv2PTgZpTLHZYb32RF | Success 
+2022-01-07 17:58:01.232 |     Success      | Dendrite | Forward  | <--- |   9   |  [10, 20, 1024] | 2.19s  | 5GjduF5WSYryD4rbDM7vEUq8nEZ6USgt7tFi16QB9adR6uVz | Success 
+2022-01-07 17:58:01.233 |     Success      | Dendrite | Forward  | <--- |   9   |  [10, 20, 1024] | 2.19s  | 5GjduF5WSYryD4rbDM7vEUq8nEZ6USgt7tFi16QB9adR6uVz | Success 
+2022-01-07 17:58:11.039 |     Timeout      | Dendrite | Forward  | <--- |   10  |       [x]       | 12.03s | 5GerdDWxQjgReFN4QPfQWbJ56WdeWaiAvPFp1jn84mkZqZQV | grpc.StatusCode.DEADLINE_EXCEEDED: Deadline Exceeded 
+2022-01-07 17:58:11.040 |     Timeout      | Dendrite | Forward  | <--- |   10  |       [x]       | 12.03s | 5GerdDWxQjgReFN4QPfQWbJ56WdeWaiAvPFp1jn84mkZqZQV | grpc.StatusCode.DEADLINE_EXCEEDED: Deadline Exceeded 
+2022-01-07 17:58:11.044 |     Timeout      | Dendrite | Forward  | <--- |   23  |       [x]       | 12.03s | 5FCKmowy45aQoSHm3d97kAfJ23HQZCYtsweb2bT32b26EVPF | grpc.StatusCode.DEADLINE_EXCEEDED: Deadline Exceeded 
+2022-01-07 17:58:11.044 |     Timeout      | Dendrite | Forward  | <--- |   23  |       [x]       | 12.04s | 5FCKmowy45aQoSHm3d97kAfJ23HQZCYtsweb2bT32b26EVPF | grpc.StatusCode.DEADLINE_EXCEEDED: Deadline Exceeded 
+2022-01-07 17:58:11.048 |     Timeout      | Dendrite | Forward  | <--- |   23  |       [x]       | 12.00s | 5FCKmowy45aQoSHm3d97kAfJ23HQZCYtsweb2bT32b26EVPF | grpc.StatusCode.DEADLINE_EXCEEDED: Deadline Exceeded 
+2022-01-07 17:58:11.048 |     Timeout      | Dendrite | Forward  | <--- |   23  |       [x]       | 12.00s | 5FCKmowy45aQoSHm3d97kAfJ23HQZCYtsweb2bT32b26EVPF | grpc.StatusCode.DEADLINE_EXCEEDED: Deadline Exceeded 
+2022-01-07 17:58:11.049 |     Timeout      | Dendrite | Forward  | <--- |   10  |       [x]       | 12.00s | 5GerdDWxQjgReFN4QPfQWbJ56WdeWaiAvPFp1jn84mkZqZQV | grpc.StatusCode.DEADLINE_EXCEEDED: Deadline Exceeded 
+2022-01-07 17:58:11.049 |     Timeout      | Dendrite | Forward  | <--- |   10  |       [x]       | 12.00s | 5GerdDWxQjgReFN4QPfQWbJ56WdeWaiAvPFp1jn84mkZqZQV | grpc.StatusCode.DEADLINE_EXCEEDED: Deadline Exceeded 
+2022-01-07 17:58:11.215 |     SUCCESS      | Forward pass:       batches_count 0, Rank 0
+(0, tensor(1303.8595, grad_fn=<AddBackward0>), ['__call__', '_register_hook_dict', 'register_hook', 'name', 'next_functions', 'requires_grad', 'metadata', '_saved_alpha', '__doc__', '__repr__', '__hash__', '__str__', '__getattribute__', '__setattr__', '__delattr__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__', '__ge__', '__init__', '__new__', '__reduce_ex__', '__reduce__', '__subclasshook__', '__init_subclass__', '__format__', '__sizeof__', '__dir__', '__class__'])
+(0, tensor(1303.8595, grad_fn=<AddBackward0>), ((<AddBackward0 object at 0x7fd9207610a0>, 0), (<NllLossBackward0 object at 0x7fd920761190>, 0)))
+2022-01-07 17:58:11.225 |     SUCCESS      | Forward pass:       batches_count 0, Rank 1
+(1, tensor(1298.6409, grad_fn=<AddBackward0>), ['__call__', '_register_hook_dict', 'register_hook', 'name', 'next_functions', 'requires_grad', 'metadata', '_saved_alpha', '__doc__', '__repr__', '__hash__', '__str__', '__getattribute__', '__setattr__', '__delattr__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__', '__ge__', '__init__', '__new__', '__reduce_ex__', '__reduce__', '__subclasshook__', '__init_subclass__', '__format__', '__sizeof__', '__dir__', '__class__'])
+(1, tensor(1298.6409, grad_fn=<AddBackward0>), ((<AddBackward0 object at 0x7ff50b334580>, 0), (<NllLossBackward0 object at 0x7ff50b334400>, 0)))
+2022-01-07 17:58:11.678 |     Success      | Dendrite | Backward | ---> |   2   |     [10, 20]    | 0.01s  | 5F4e8Fk6NWPa95fvaaAk6nkFFbbjXAVXQV2ka1qSUq8JYFKp | None 
+2022-01-07 17:58:11.685 |     Success      | Dendrite | Backward | ---> |   0   |     [10, 20]    | 0.01s  | 5HNEAb7LxME2ei1JuW2Aw9kUra2sSydG7qfgJMGhKBke4cUW | None 
+2022-01-07 17:58:11.687 |     Success      | Dendrite | Backward | ---> |   8   |     [10, 20]    | 0.02s  | 5CMDwojhYgog4Hswn1ijfRvn6wSHa54g4onYd6tY3HvPX1th | None 
+2022-01-07 17:58:11.689 |     Success      | Dendrite | Backward | ---> |   9   |     [10, 20]    | 0.02s  | 5GjduF5WSYryD4rbDM7vEUq8nEZ6USgt7tFi16QB9adR6uVz | None 
+2022-01-07 17:58:11.693 |     Success      | Dendrite | Backward | ---> |   4   |     [10, 20]    | 0.02s  | 5HTcjxbLACuo38sHhPr5fSUM27yS84kv2PTgZpTLHZYb32RF | None 
+2022-01-07 17:58:11.695 |     Success      | Dendrite | Backward | ---> |   23  |     [10, 20]    | 0.02s  | 5FCKmowy45aQoSHm3d97kAfJ23HQZCYtsweb2bT32b26EVPF | None 
+2022-01-07 17:58:11.697 |     Success      | Dendrite | Backward | ---> |   7   |     [10, 20]    | 0.02s  | 5DsxDtViMyYC493LiPzoWHasN9KGrJnjZPden8iq7ADMoRW8 | None 
+2022-01-07 17:58:11.699 |     Success      | Dendrite | Backward | ---> |   10  |     [10, 20]    | 0.02s  | 5GerdDWxQjgReFN4QPfQWbJ56WdeWaiAvPFp1jn84mkZqZQV | None 
+2022-01-07 17:58:12.313 |     SUCCESS      | (0, 'module.peer_weights', None):
+2022-01-07 17:58:12.315 |     SUCCESS      | (0, 'module.embedding.weight', tensor([[0., 0., 0.,  ..., 0., 0., 0.],
+        [0., 0., 0.,  ..., 0., 0., 0.],
+        [0., 0., 0.,  ..., 0., 0., 0.],
+        ...,
+        [0., 0., 0.,  ..., 0., 0., 0.],
+        [0., 0., 0.,  ..., 0., 0., 0.],
+        [0., 0., 0.,  ..., 0., 0., 0.]])):
+2022-01-07 17:58:12.315 |     SUCCESS      | Backward pass:      batches_count 0, Rank 0
+2022-01-07 17:58:12.447 |     SUCCESS      | Backward pass, clip norm:batches_count 0, Rank 0
+2022-01-07 17:58:12.644 |     SUCCESS      | Optimizer pass, step:batches_count 0, Rank 0
+2022-01-07 17:58:12.723 |     SUCCESS      | Optimizer pass, zero grad:batches_count 0, Rank 0
+2022-01-07 17:58:12.723 |     SUCCESS      | Optimizer pass, zero grad:batches_count 0, Rank 0
+ Iters    Elapsed Time      Speed                                                                                                                                                                                                                                                         
+  3/7   00:00:40<00:00:54  0.07it/s                                                                                                                                                                                                                                                       
+Epoch:  42.9% |##################################################################################################################                                                                                                                                                        |2022-01-07 17:58:13.303 |      ERROR       | Unknown exception: Expected to have finished reduction in the prior iteration before starting a new one. This error indicates that your module has parameters that were not used in producing loss. You can enable unused parameter detection by passing the keyword argument `find_unused_parameters=True` to `torch.nn.parallel.DistributedDataParallel`, and by 
+making sure all `forward` function outputs participate in calculating loss. 
+If you already have done the above, then the distributed data parallel module wasn't able to locate the output tensors in the return value of your module's `forward` function. Please include the loss function and the structure of the return value of `forward` of your module when reporting this issue (e.g. list, dict, iterable).
+Parameters which did not receive grad for rank 0: .peer_weights
+Parameter indices which did not receive grad for rank 0: 0 with traceback Traceback (most recent call last):
+  File "/home/isabella/.bittensor/bittensor/bittensor/_neuron/text/template_miner/neuron_impl.py", line 207, in run
+    output = nucleus_ddp.forward(
+  File "/home/isabella/.local/lib/python3.8/site-packages/torch/nn/parallel/distributed.py", line 873, in forward
+    if torch.is_grad_enabled() and self.reducer._rebuild_buckets():
+RuntimeError: Expected to have finished reduction in the prior iteration before starting a new one. This error indicates that your module has parameters that were not used in producing loss. You can enable unused parameter detection by passing the keyword argument `find_unused_parameters=True` to `torch.nn.parallel.DistributedDataParallel`, and by 
+making sure all `forward` function outputs participate in calculating loss. 
+If you already have done the above, then the distributed data parallel module wasn't able to locate the output tensors in the return value of your module's `forward` function. Please include the loss function and the structure of the return value of `forward` of your module when reporting this issue (e.g. list, dict, iterable).
+Parameters which did not receive grad for rank 0: .peer_weights
+Parameter indices which did not receive grad for rank 0: 0
+
+2022-01-07 17:58:13.312 |       INFO       | Restarting from last saved state.
+

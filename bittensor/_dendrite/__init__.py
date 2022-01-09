@@ -42,6 +42,7 @@ class dendrite:
             max_worker_threads: int = None,
             max_active_receptors: int = None,
             receptor_pool: 'bittensor.ReceptorPool' = None,
+            rank: int = 0
         ) -> 'bittensor.Dendrite':
         r""" Creates a new Dendrite object from passed arguments.
             Args:
@@ -97,6 +98,7 @@ class dendrite:
             wallet = wallet, 
             receptor_pool = manager_client.get_receptorpool(),
             manager = manager_client,
+            rank = rank
         )
 
     @classmethod   

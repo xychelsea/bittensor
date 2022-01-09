@@ -200,16 +200,26 @@ class Nucleus(nn.Module):
                     Distillation loss between local_context and remote_context.
             )
         """
+        bittensor.logging.success(f"inside remote forward", sufix = "")
         # Run local model
         output = self.local_forward( inputs, training )
+        bittensor.logging.success(f"after local pass", sufix = "")
 
         # remote_context: joined responses from a dendrite.forward_text call.
         # remote_context.shape = [batch_size, sequence_len (or block_size), bittensor.__network_dim__]
-        output.remote_context = self.remote( inputs )
+        remote_context = self.remote( inputs )
+        # bittensor.logging.success(f"after remote pass", sufix = "")
+        # bittensor.logging.success(f"requires grad in remote", sufix = f"{self.peer_weights.requires_grad,  remote_context.requires_grad}")
 
+        # l = torch.sum(remote_context)
+        # try:
+        #     l.backward()
+        # except Exception as e:
+        #     bittensor.logging.success(f"failed grad in remote_forward", sufix = f"{e}")
+        # bittensor.logging.success(f"grad", sufix = f"{self.peer_weights.grad }")
         # remote_hidden: projects from the remote_context
         # remote_hidden.shape = [batch_size, sequence_len, bittensor.__vocab_size__]
-        output.remote_hidden = self.remote_hidden( output.remote_context )
+        output.remote_hidden = self.remote_hidden( remote_context )
 
         # distillation_loss : distillation loss between local_context and remote_context
         # distillation_loss.shape = [1]
@@ -267,10 +277,18 @@ class Nucleus(nn.Module):
         output = torch.zeros( (inputs.shape[0], inputs.shape[1], bittensor.__network_dim__)).to( self.config.neuron.device )
         for index, joining_weight in enumerate( joining_weights ):
             output += responses[joining_uids[index]].to( self.config.neuron.device ) * joining_weight
+            bittensor.logging.success(f"j0ining", sufix = f"{joining_uids[index], }")
+
+        self.peer_weights.retain_grad()
 
         # ---- Punish peers with non-successful return ops ----
-        with torch.no_grad():
-            self.peer_weights[topk_uids[(return_ops != bittensor.proto.ReturnCode.Success)]] -=  self.config.nucleus.punishment
-            self.peer_weights[self.peer_weights < -1] = -1 #lower bound for chain weights
+        # with torch.no_grad():
+        #     self.peer_weights[topk_uids[(return_ops != bittensor.proto.ReturnCode.Success)]] -=  self.config.nucleus.punishment
+        #     self.peer_weights[self.peer_weights < -1] = -1 #lower bound for chain weights
+        
+        # bittensor.logging.success(f"grad requires grad in remote", sufix = f"{self.peer_weights.requires_grad }")
+        # l = torch.sum(output)
+        # l.backward()
+        # bittensor.logging.success(f"grad in remote", sufix = f"{self.peer_weights.grad }")
         
         return output

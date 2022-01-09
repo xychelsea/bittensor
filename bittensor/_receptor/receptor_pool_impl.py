@@ -17,6 +17,7 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 # DEALINGS IN THE SOFTWARE.
 
+import os
 import math
 from typing import Tuple, List
 
@@ -26,7 +27,7 @@ import concurrent
 import bittensor
 import bittensor.utils.networking as net
 from concurrent.futures import ThreadPoolExecutor
-
+import random
 logger = logger.opt(colors=True)
 
 class ReceptorPool ( torch.nn.Module ):
@@ -101,10 +102,11 @@ class ReceptorPool ( torch.nn.Module ):
                 forward_times (:obj:`List[float]` of shape :obj:`(num_endpoints)`, `required`):
                     dendrite backward call times
         """
-        
+        rank = random.randint(0,10) 
         if len(endpoints) != len(inputs):
             raise ValueError('Endpoints must have the same length as passed inputs. Got {} and {}'.format(len(endpoints), len(inputs)))
 
+        bittensor.logging.success(f"num endpoints", sufix = f"{len(endpoints)}")
         # ---- Fill calls ----
         call_args = [ 
             (self._get_or_create_receptor_for_endpoint( endpoint ), inputs, modality) 
@@ -122,13 +124,13 @@ class ReceptorPool ( torch.nn.Module ):
         request_futures = []
         for arg, request in zip(call_args, requests):
             receptor = arg[0]
-            request_futures.append(receptor.make_request_call(request = request, timeout = timeout))
+            request_futures.append(receptor.make_request_call(request = request, timeout = timeout, rank = rank))
 
         # ---- Collect the futures. ---- 
         results = []
         for arg, request in zip(call_args, request_futures):
             receptor = arg[0]
-            results.append(receptor.handle_request_response(request = request))
+            results.append(receptor.handle_request_response(request = request, rank = rank))
        
         try:
             forward_outputs, forward_codes, forward_times = zip(*results)
@@ -187,6 +189,7 @@ class ReceptorPool ( torch.nn.Module ):
                 backward_times (:obj:`List[float]` of shape :obj:`(num_endpoints)`, `required`):
                     dendrite call times.
         """
+        rank = random.randint(0,10) 
         if len(endpoints) != len(inputs_x):
             raise ValueError('Endpoints and inputs must have the same length. Got {} and {}'.format(len(endpoints), len(inputs_x)))
 
@@ -207,7 +210,7 @@ class ReceptorPool ( torch.nn.Module ):
         request_futures = []
         for arg, request in zip(call_args, requests):
             receptor = arg[0]
-            request_futures.append(receptor.make_request_call(request = request, timeout = timeout))
+            request_futures.append(receptor.make_request_call(request = request, timeout = timeout, rank = rank))
 
         # ---- Return zeros ----
         backward_outputs= [torch.zeros( (inputs_x[0].size(0), inputs_x[0].size(1), bittensor.__network_dim__), dtype=torch.float32)] * len(endpoints) 

@@ -1,0 +1,352 @@
+
+axon:
+  backward_timeout: 20
+  forward_timeout: 10
+  ip: '[::]'
+  max_workers: 10
+  maximum_concurrent_rpcs: 400
+  port: 8091
+  priority:
+    max_workers: 10
+    maxsize: -1
+config: null
+dataset:
+  batch_size: 10
+  block_size: 20
+  data_dir: ~/.bittensor/data/
+  dataset_name:
+  - Books3
+  max_corpus_size: 10000.0
+  max_datasets: 3
+  no_tokenizer: false
+  num_workers: 0
+  save_dataset: false
+dendrite:
+  max_active_receptors: 500
+  max_worker_threads: 150
+  requires_grad: true
+  timeout: 12
+logging:
+  debug: true
+  logging_dir: ~/.bittensor/miners
+  record_log: false
+  trace: false
+neuron:
+  accumulate_remote_gradients: false
+  batch_size_train: 2
+  blacklist: 0
+  blacklist_allow_non_registered: true
+  clip_gradients: 1.0
+  compute_remote_gradients: false
+  device: cpu
+  epoch_length: 7
+  learning_rate: 1
+  learning_rate_chain: 1
+  momentum: 0.8
+  multiprocessing: true
+  n_epochs: 9223372036854775807
+  n_topk_peer_weights: 100
+  name: template_neuron
+  no_restart: false
+  restart_on_failure: true
+  sync_block_time: 100
+  timeout: 10
+  use_upnpc: false
+  use_wandb: false
+  weight_decay: 0.25
+  world_size: 2
+nucleus:
+  dropout: 0.2
+  nhead: 2
+  nhid: 200
+  nlayers: 2
+  noise_multiplier: 1
+  noise_offset: 0.001
+  punishment: 0.001
+  topk: 20
+subtensor:
+  chain_endpoint: null
+  network: nobunaga
+wallet:
+  hotkey: default
+  name: default
+  path: ~/.bittensor/wallets/
+wandb:
+  api_key: default
+  directory: default
+  name: default
+  offline: false
+  project: default
+  run_group: default
+  tags: default
+
+2022-01-07 12:09:16.434 | [32m[1m    SUCCESS     [0m | Set debug:          [32mON[0m
+2022-01-07 12:09:16.434 | [32m[1m    SUCCESS     [0m | Set trace:          [31mOFF[0m
+2022-01-07 12:09:16.434 | [32m[1m    SUCCESS     [0m | Set record log:     [31mOFF[0m
+2022-01-07 12:09:17.836 | [32m[1m    SUCCESS     [0m | Set debug:          [32mON[0m
+2022-01-07 12:09:17.837 | [32m[1m    SUCCESS     [0m | Set trace:          [31mOFF[0m
+2022-01-07 12:09:17.837 | [32m[1m    SUCCESS     [0m | Set record log:     [31mOFF[0m
+2022-01-07 12:09:17.837 | [32m[1m    SUCCESS     [0m | Dendrite manager server:Served
+2022-01-07 12:09:17.840 | [32m[1m    SUCCESS     [0m | Manager Server: Added 1 connection, total connections: 1
+2022-01-07 12:09:17.840 | [32m[1m    SUCCESS     [0m | Manager Server: Added 1 connection, total connections: 2
+2022-01-07 12:09:17.842 | [32m[1m    SUCCESS     [0m | Dendrite manager server:Connected
+2022-01-07 12:09:17.844 | [32m[1m    SUCCESS     [0m | Set debug:          [32mON[0m
+2022-01-07 12:09:17.844 | [32m[1m    SUCCESS     [0m | Set trace:          [31mOFF[0m
+2022-01-07 12:09:17.844 | [32m[1m    SUCCESS     [0m | Set record log:     [31mOFF[0m
+2022-01-07 12:09:17.844 | [32m[1m    SUCCESS     [0m | Dendrite manager server:Connected
+2022-01-07 12:09:18.968 | [32m[1m    SUCCESS     [0m | Retrieving a dataset files from the IPFS gateway...
+2022-01-07 12:09:18.969 | [32m[1m    SUCCESS     [0m | got dataset:        Rank 0
+2022-01-07 12:09:18.969 | [32m[1m    SUCCESS     [0m | Loading dataset:    [34mBooks3[0m
+2022-01-07 12:09:18.969 | [32m[1m    SUCCESS     [0m | Retrieving a dataset files from the IPFS gateway...
+2022-01-07 12:09:18.970 | [32m[1m    SUCCESS     [0m | Loading dataset:    [34mBooks3[0m
+2022-01-07 12:09:18.975 | [32m[1m    SUCCESS     [0m | got dataset:        Rank 1
+2022-01-07 12:09:18.981 | [32m[1m    SUCCESS     [0m | got axon:           Rank 0
+2022-01-07 12:09:18.982 | [32m[1m    SUCCESS     [0m | got axon:           Rank 1
+2022-01-07 12:09:18.983 | [32m[1m    SUCCESS     [0m | Finished initialization:Rank 1
+✅ Already Registered:
+  uid: 10
+  hotkey: 5GerdDWxQjgReFN4QPfQWbJ56WdeWaiAvPFp1jn84mkZqZQV
+  coldkey: 5CJHPmqij4S8yj3vEfECqNSAemkRk3zSAkWeLwyMWFTLU58F
+2022-01-07 12:09:19.804 | [32m[1m    SUCCESS     [0m | Axon Stopped:       [34m[::]:8091[0m
+2022-01-07 12:09:19.806 | [32m[1m    SUCCESS     [0m | Axon Started:       [34m[::]:8091[0m
+✅ Found external ip: 74.14.27.128
+2022-01-07 12:09:19.932 | [32m[1m    SUCCESS     [0m | External IP:        [34m74.14.27.128[0m
+  0%|          | 0/27 [00:00<?, ?it/s]  4%|▎         | 1/27 [00:00<00:05,  4.45it/s]✅ Already Served
+  ip: 74.14.27.128
+  port: 8091
+  modality: 0
+  hotkey: 5GerdDWxQjgReFN4QPfQWbJ56WdeWaiAvPFp1jn84mkZqZQV
+  coldkey: 5CJHPmqij4S8yj3vEfECqNSAemkRk3zSAkWeLwyMWFTLU58F
+2022-01-07 12:09:20.384 | [32m[1m    SUCCESS     [0m | got axon running :  Rank 0
+2022-01-07 12:09:20.384 | [32m[1m    SUCCESS     [0m | Finished initialization:Rank 0
+  7%|▋         | 2/27 [00:00<00:05,  4.45it/s] 11%|█         | 3/27 [00:00<00:05,  4.76it/s] 15%|█▍        | 4/27 [00:00<00:04,  4.72it/s]  0%|          | 0/27 [00:00<?, ?it/s] 19%|█▊        | 5/27 [00:01<00:04,  4.76it/s]  4%|▎         | 1/27 [00:00<00:05,  4.51it/s] 22%|██▏       | 6/27 [00:01<00:04,  4.66it/s]  7%|▋         | 2/27 [00:00<00:06,  4.00it/s] 26%|██▌       | 7/27 [00:01<00:04,  4.40it/s] 11%|█         | 3/27 [00:00<00:05,  4.14it/s] 30%|██▉       | 8/27 [00:01<00:04,  4.58it/s] 15%|█▍        | 4/27 [00:00<00:05,  4.37it/s] 33%|███▎      | 9/27 [00:01<00:03,  4.60it/s] 19%|█▊        | 5/27 [00:01<00:04,  4.45it/s] 37%|███▋      | 10/27 [00:02<00:03,  4.59it/s] 22%|██▏       | 6/27 [00:01<00:04,  4.37it/s] 41%|████      | 11/27 [00:02<00:03,  4.48it/s] 26%|██▌       | 7/27 [00:01<00:04,  4.58it/s] 44%|████▍     | 12/27 [00:02<00:03,  4.63it/s] 30%|██▉       | 8/27 [00:01<00:04,  4.63it/s] 48%|████▊     | 13/27 [00:02<00:02,  4.69it/s] 33%|███▎      | 9/27 [00:02<00:03,  4.65it/s] 52%|█████▏    | 14/27 [00:03<00:02,  4.68it/s] 37%|███▋      | 10/27 [00:02<00:03,  4.61it/s] 56%|█████▌    | 15/27 [00:03<00:02,  4.77it/s] 41%|████      | 11/27 [00:02<00:03,  4.72it/s] 59%|█████▉    | 16/27 [00:03<00:02,  4.86it/s] 44%|████▍     | 12/27 [00:02<00:03,  4.82it/s] 63%|██████▎   | 17/27 [00:03<00:02,  4.85it/s] 48%|████▊     | 13/27 [00:02<00:02,  4.82it/s] 67%|██████▋   | 18/27 [00:03<00:01,  4.76it/s] 52%|█████▏    | 14/27 [00:03<00:03,  4.26it/s] 70%|███████   | 19/27 [00:04<00:01,  4.19it/s] 56%|█████▌    | 15/27 [00:03<00:02,  4.52it/s] 74%|███████▍  | 20/27 [00:04<00:01,  4.35it/s] 59%|█████▉    | 16/27 [00:03<00:02,  4.71it/s] 78%|███████▊  | 21/27 [00:04<00:01,  4.54it/s] 63%|██████▎   | 17/27 [00:03<00:02,  4.82it/s] 81%|████████▏ | 22/27 [00:04<00:01,  4.60it/s] 67%|██████▋   | 18/27 [00:03<00:01,  4.88it/s] 85%|████████▌ | 23/27 [00:04<00:00,  4.61it/s] 70%|███████   | 19/27 [00:04<00:01,  4.84it/s] 89%|████████▉ | 24/27 [00:05<00:00,  4.65it/s] 74%|███████▍  | 20/27 [00:04<00:01,  4.83it/s] 93%|█████████▎| 25/27 [00:05<00:00,  4.74it/s] 78%|███████▊  | 21/27 [00:04<00:01,  4.96it/s] 96%|█████████▋| 26/27 [00:05<00:00,  4.84it/s] 81%|████████▏ | 22/27 [00:04<00:01,  4.92it/s]100%|██████████| 27/27 [00:05<00:00,  4.90it/s]100%|██████████| 27/27 [00:05<00:00,  4.66it/s] 85%|████████▌ | 23/27 [00:04<00:00,  4.93it/s]2022-01-07 12:09:26.157 | [32m[1m    SUCCESS     [0m | Reloaded model:     [34m/home/isabella/.bittensor/miners/default/default/template_neuron/model.torch[0m
+ 89%|████████▉ | 24/27 [00:05<00:00,  4.76it/s] 93%|█████████▎| 25/27 [00:05<00:00,  4.69it/s] 96%|█████████▋| 26/27 [00:05<00:00,  4.68it/s]100%|██████████| 27/27 [00:05<00:00,  4.93it/s]100%|██████████| 27/27 [00:05<00:00,  4.68it/s]2022-01-07 12:09:27.091 | [32m[1m    SUCCESS     [0m | Reloaded model:     [34m/home/isabella/.bittensor/miners/default/default/template_neuron/model.torch[0m
+2022-01-07 12:09:27.565 | [32m[1m    SUCCESS     [0m | Enabled DDP:        [34mRank: 0[0m
+2022-01-07 12:09:27.565 | [32m[1m    SUCCESS     [0m | Enabled DDP:        [34mRank: 1[0m
+2022-01-07 12:09:27.565 | [32m[1m    SUCCESS     [0m | finished setting ddp dend and meta:Rank 0
+2022-01-07 12:09:27.565 | [32m[1m    SUCCESS     [0m | finished setting ddp dend and meta:Rank 1
+2022-01-07 12:09:27.566 | [32m[1m    SUCCESS     [0m | Initialized:        Rank 0
+2022-01-07 12:09:27.566 | [32m[1m    SUCCESS     [0m | Initialized:        Rank 1
+
+ [1mIters[0m    [1mElapsed Time[0m      [1mSpeed[0m                                               
+  [99m0/[93m7[0m[0m   [99m        -        [0m  [99m   -    [0m                                             
+[94mEpoch:[0m   0.0% |                                                                |
+ [1mIters[0m    [1mElapsed Time[0m      [1mSpeed[0m                                               
+  [99m0/[93m7[0m[0m   [99m        -        [0m  [99m   -    [0m                                             
+[94mEpoch:[0m   0.0% |                                                                |2022-01-07 12:09:37.975 | [32m[1m    SUCCESS     [0m | Loaded dataset:     [34mBooks3[0m
+2022-01-07 12:09:38.598 | [32m[1m    SUCCESS     [0m | Downloaded:         [34m09-Books3-8507.txt[0m
+2022-01-07 12:09:39.071 | [32m[1m    SUCCESS     [0m | Loaded dataset:     [34mBooks3[0m
+2022-01-07 12:09:39.749 | [32m[1m    SUCCESS     [0m | Downloaded:         [34m21-Books3-7607.txt[0m
+2022-01-07 12:09:40.366 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 0, Rank 0
+2022-01-07 12:09:40.369 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 0, Rank 1
+2022-01-07 12:09:40.673 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 0, Rank 0
+2022-01-07 12:09:40.797 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 0, Rank 0
+2022-01-07 12:09:40.821 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 0, Rank 1
+2022-01-07 12:09:40.961 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 0, Rank 1
+[K[F[K[F [1mIters[0m    [1mElapsed Time[0m      [1mSpeed[0m                                               
+  [99m0/[93m7[0m[0m   [99m        -        [0m  [99m   -    [0m                                             
+[94mEpoch:[0m   0.0% |                                                                |2022-01-07 12:09:40.967 | [31m[1m     ERROR      [0m | Unknown exception: Expected to have finished reduction in the prior iteration before starting a new one. This error indicates that your module has parameters that were not used in producing loss. You can enable unused parameter detection by passing the keyword argument `find_unused_parameters=True` to `torch.nn.parallel.DistributedDataParallel`, and by 
+making sure all `forward` function outputs participate in calculating loss. 
+If you already have done the above, then the distributed data parallel module wasn't able to locate the output tensors in the return value of your module's `forward` function. Please include the loss function and the structure of the return value of `forward` of your module when reporting this issue (e.g. list, dict, iterable).
+Parameters which did not receive grad for rank 0: local_encoder.layers.0.norm2.bias, local_encoder.layers.0.norm2.weight, local_encoder.layers.0.norm1.bias, local_encoder.layers.0.norm1.weight, local_encoder.layers.0.linear2.bias, local_encoder.layers.0.linear2.weight, local_encoder.layers.0.linear1.bias, local_encoder.layers.0.linear1.weight, local_encoder.layers.0.self_attn.out_proj.bias, local_encoder.layers.0.self_attn.out_proj.weight, local_encoder.layers.0.self_attn.in_proj_bias, local_encoder.layers.0.self_attn.in_proj_weight, embedding.weight, local_encoder.layers.1.self_attn.in_proj_weight, local_encoder.layers.1.self_attn.in_proj_bias, local_encoder.layers.1.self_attn.out_proj.weight, local_encoder.layers.1.self_attn.out_proj.bias, local_encoder.layers.1.linear1.weight, local_encoder.layers.1.linear1.bias, local_encoder.layers.1.linear2.weight, local_encoder.layers.1.linear2.bias, local_encoder.layers.1.norm1.weight, local_encoder.layers.1.norm1.bias, local_encoder.layers.1.norm2.weight, local_encoder.layers.1.norm2.bias
+Parameter indices which did not receive grad for rank 0: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 with traceback Traceback (most recent call last):
+  File "/home/isabella/.bittensor/bittensor/bittensor/_neuron/text/template_miner/neuron_impl.py", line 205, in run
+    output = self.nucleus.forward(
+  File "/home/isabella/.local/lib/python3.8/site-packages/torch/nn/parallel/distributed.py", line 873, in forward
+    if torch.is_grad_enabled() and self.reducer._rebuild_buckets():
+RuntimeError: Expected to have finished reduction in the prior iteration before starting a new one. This error indicates that your module has parameters that were not used in producing loss. You can enable unused parameter detection by passing the keyword argument `find_unused_parameters=True` to `torch.nn.parallel.DistributedDataParallel`, and by 
+making sure all `forward` function outputs participate in calculating loss. 
+If you already have done the above, then the distributed data parallel module wasn't able to locate the output tensors in the return value of your module's `forward` function. Please include the loss function and the structure of the return value of `forward` of your module when reporting this issue (e.g. list, dict, iterable).
+Parameters which did not receive grad for rank 0: local_encoder.layers.0.norm2.bias, local_encoder.layers.0.norm2.weight, local_encoder.layers.0.norm1.bias, local_encoder.layers.0.norm1.weight, local_encoder.layers.0.linear2.bias, local_encoder.layers.0.linear2.weight, local_encoder.layers.0.linear1.bias, local_encoder.layers.0.linear1.weight, local_encoder.layers.0.self_attn.out_proj.bias, local_encoder.layers.0.self_attn.out_proj.weight, local_encoder.layers.0.self_attn.in_proj_bias, local_encoder.layers.0.self_attn.in_proj_weight, embedding.weight, local_encoder.layers.1.self_attn.in_proj_weight, local_encoder.layers.1.self_attn.in_proj_bias, local_encoder.layers.1.self_attn.out_proj.weight, local_encoder.layers.1.self_attn.out_proj.bias, local_encoder.layers.1.linear1.weight, local_encoder.layers.1.linear1.bias, local_encoder.layers.1.linear2.weight, local_encoder.layers.1.linear2.bias, local_encoder.layers.1.norm1.weight, local_encoder.layers.1.norm1.bias, local_encoder.layers.1.norm2.weight, local_encoder.layers.1.norm2.bias
+Parameter indices which did not receive grad for rank 0: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+
+2022-01-07 12:09:40.969 | [1m      INFO      [0m | Restarting from last saved state.
+[K[F[K[F [1mIters[0m    [1mElapsed Time[0m      [1mSpeed[0m                                               
+  [99m0/[93m7[0m[0m   [99m        -        [0m  [99m   -    [0m                                             
+[94mEpoch:[0m   0.0% |                                                                |2022-01-07 12:09:41.110 | [31m[1m     ERROR      [0m | Unknown exception: Expected to have finished reduction in the prior iteration before starting a new one. This error indicates that your module has parameters that were not used in producing loss. You can enable unused parameter detection by passing the keyword argument `find_unused_parameters=True` to `torch.nn.parallel.DistributedDataParallel`, and by 
+making sure all `forward` function outputs participate in calculating loss. 
+If you already have done the above, then the distributed data parallel module wasn't able to locate the output tensors in the return value of your module's `forward` function. Please include the loss function and the structure of the return value of `forward` of your module when reporting this issue (e.g. list, dict, iterable).
+Parameters which did not receive grad for rank 1: local_encoder.layers.0.norm2.bias, local_encoder.layers.0.norm2.weight, local_encoder.layers.0.norm1.bias, local_encoder.layers.0.norm1.weight, local_encoder.layers.0.linear2.bias, local_encoder.layers.0.linear2.weight, local_encoder.layers.0.linear1.bias, local_encoder.layers.0.linear1.weight, local_encoder.layers.0.self_attn.out_proj.bias, local_encoder.layers.0.self_attn.out_proj.weight, local_encoder.layers.0.self_attn.in_proj_bias, local_encoder.layers.0.self_attn.in_proj_weight, embedding.weight, local_encoder.layers.1.self_attn.in_proj_weight, local_encoder.layers.1.self_attn.in_proj_bias, local_encoder.layers.1.self_attn.out_proj.weight, local_encoder.layers.1.self_attn.out_proj.bias, local_encoder.layers.1.linear1.weight, local_encoder.layers.1.linear1.bias, local_encoder.layers.1.linear2.weight, local_encoder.layers.1.linear2.bias, local_encoder.layers.1.norm1.weight, local_encoder.layers.1.norm1.bias, local_encoder.layers.1.norm2.weight, local_encoder.layers.1.norm2.bias
+Parameter indices which did not receive grad for rank 1: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 with traceback Traceback (most recent call last):
+  File "/home/isabella/.bittensor/bittensor/bittensor/_neuron/text/template_miner/neuron_impl.py", line 205, in run
+    output = self.nucleus.forward(
+  File "/home/isabella/.local/lib/python3.8/site-packages/torch/nn/parallel/distributed.py", line 873, in forward
+    if torch.is_grad_enabled() and self.reducer._rebuild_buckets():
+RuntimeError: Expected to have finished reduction in the prior iteration before starting a new one. This error indicates that your module has parameters that were not used in producing loss. You can enable unused parameter detection by passing the keyword argument `find_unused_parameters=True` to `torch.nn.parallel.DistributedDataParallel`, and by 
+making sure all `forward` function outputs participate in calculating loss. 
+If you already have done the above, then the distributed data parallel module wasn't able to locate the output tensors in the return value of your module's `forward` function. Please include the loss function and the structure of the return value of `forward` of your module when reporting this issue (e.g. list, dict, iterable).
+Parameters which did not receive grad for rank 1: local_encoder.layers.0.norm2.bias, local_encoder.layers.0.norm2.weight, local_encoder.layers.0.norm1.bias, local_encoder.layers.0.norm1.weight, local_encoder.layers.0.linear2.bias, local_encoder.layers.0.linear2.weight, local_encoder.layers.0.linear1.bias, local_encoder.layers.0.linear1.weight, local_encoder.layers.0.self_attn.out_proj.bias, local_encoder.layers.0.self_attn.out_proj.weight, local_encoder.layers.0.self_attn.in_proj_bias, local_encoder.layers.0.self_attn.in_proj_weight, embedding.weight, local_encoder.layers.1.self_attn.in_proj_weight, local_encoder.layers.1.self_attn.in_proj_bias, local_encoder.layers.1.self_attn.out_proj.weight, local_encoder.layers.1.self_attn.out_proj.bias, local_encoder.layers.1.linear1.weight, local_encoder.layers.1.linear1.bias, local_encoder.layers.1.linear2.weight, local_encoder.layers.1.linear2.bias, local_encoder.layers.1.norm1.weight, local_encoder.layers.1.norm1.bias, local_encoder.layers.1.norm2.weight, local_encoder.layers.1.norm2.bias
+Parameter indices which did not receive grad for rank 1: 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+
+2022-01-07 12:09:41.112 | [1m      INFO      [0m | Restarting from last saved state.
+  0%|          | 0/27 [00:00<?, ?it/s]  0%|          | 0/27 [00:00<?, ?it/s]  4%|▎         | 1/27 [00:00<00:04,  6.01it/s]  4%|▎         | 1/27 [00:00<00:04,  6.00it/s]  7%|▋         | 2/27 [00:00<00:04,  6.09it/s]  7%|▋         | 2/27 [00:00<00:04,  5.83it/s] 11%|█         | 3/27 [00:00<00:04,  5.88it/s] 11%|█         | 3/27 [00:00<00:04,  5.93it/s] 15%|█▍        | 4/27 [00:00<00:03,  5.79it/s] 15%|█▍        | 4/27 [00:00<00:03,  5.86it/s] 19%|█▊        | 5/27 [00:00<00:03,  5.90it/s] 19%|█▊        | 5/27 [00:00<00:03,  5.81it/s] 22%|██▏       | 6/27 [00:01<00:03,  5.85it/s] 22%|██▏       | 6/27 [00:01<00:03,  5.87it/s] 26%|██▌       | 7/27 [00:01<00:03,  5.77it/s] 26%|██▌       | 7/27 [00:01<00:03,  5.79it/s] 30%|██▉       | 8/27 [00:01<00:03,  5.80it/s] 30%|██▉       | 8/27 [00:01<00:03,  5.64it/s] 33%|███▎      | 9/27 [00:01<00:03,  5.80it/s] 33%|███▎      | 9/27 [00:01<00:03,  5.65it/s] 37%|███▋      | 10/27 [00:01<00:02,  5.74it/s] 37%|███▋      | 10/27 [00:01<00:02,  5.75it/s] 41%|████      | 11/27 [00:01<00:02,  5.84it/s] 44%|████▍     | 12/27 [00:02<00:02,  5.90it/s] 41%|████      | 11/27 [00:01<00:02,  5.67it/s] 44%|████▍     | 12/27 [00:02<00:02,  5.60it/s] 48%|████▊     | 13/27 [00:02<00:02,  5.71it/s] 48%|████▊     | 13/27 [00:02<00:02,  5.72it/s] 52%|█████▏    | 14/27 [00:02<00:02,  5.71it/s] 52%|█████▏    | 14/27 [00:02<00:02,  5.54it/s] 56%|█████▌    | 15/27 [00:02<00:02,  5.61it/s] 56%|█████▌    | 15/27 [00:02<00:02,  5.69it/s] 59%|█████▉    | 16/27 [00:02<00:01,  5.76it/s] 63%|██████▎   | 17/27 [00:02<00:01,  5.71it/s] 59%|█████▉    | 16/27 [00:02<00:02,  5.46it/s] 67%|██████▋   | 18/27 [00:03<00:01,  5.71it/s] 63%|██████▎   | 17/27 [00:02<00:01,  5.50it/s] 70%|███████   | 19/27 [00:03<00:01,  5.81it/s] 67%|██████▋   | 18/27 [00:03<00:01,  5.57it/s] 74%|███████▍  | 20/27 [00:03<00:01,  5.75it/s] 70%|███████   | 19/27 [00:03<00:01,  5.72it/s] 78%|███████▊  | 21/27 [00:03<00:01,  5.72it/s] 74%|███████▍  | 20/27 [00:03<00:01,  5.72it/s] 81%|████████▏ | 22/27 [00:03<00:00,  5.72it/s] 78%|███████▊  | 21/27 [00:03<00:01,  5.70it/s] 85%|████████▌ | 23/27 [00:03<00:00,  5.84it/s] 81%|████████▏ | 22/27 [00:03<00:00,  5.72it/s] 89%|████████▉ | 24/27 [00:04<00:00,  5.93it/s] 85%|████████▌ | 23/27 [00:04<00:00,  5.75it/s] 93%|█████████▎| 25/27 [00:04<00:00,  5.97it/s] 89%|████████▉ | 24/27 [00:04<00:00,  5.76it/s] 96%|█████████▋| 26/27 [00:04<00:00,  6.02it/s] 93%|█████████▎| 25/27 [00:04<00:00,  5.86it/s]100%|██████████| 27/27 [00:04<00:00,  5.95it/s]100%|██████████| 27/27 [00:04<00:00,  5.82it/s] 96%|█████████▋| 26/27 [00:04<00:00,  5.85it/s]100%|██████████| 27/27 [00:04<00:00,  5.75it/s]100%|██████████| 27/27 [00:04<00:00,  5.72it/s]2022-01-07 12:09:46.502 | [32m[1m    SUCCESS     [0m | Reloaded model:     [34m/home/isabella/.bittensor/miners/default/default/template_neuron/model.torch[0m
+
+ [1mIters[0m    [1mElapsed Time[0m      [1mSpeed[0m                                               
+  [99m0/[93m7[0m[0m   [99m        -        [0m  [99m   -    [0m                                             
+[94mEpoch:[0m   0.0% |                                                                |2022-01-07 12:09:46.713 | [32m[1m    SUCCESS     [0m | Reloaded model:     [34m/home/isabella/.bittensor/miners/default/default/template_neuron/model.torch[0m
+
+ [1mIters[0m    [1mElapsed Time[0m      [1mSpeed[0m                                               
+  [99m0/[93m7[0m[0m   [99m        -        [0m  [99m   -    [0m                                             
+[94mEpoch:[0m   0.0% |                                                                |2022-01-07 12:09:46.887 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 0, Rank 0
+[K[F[K[F [1mIters[0m    [1mElapsed Time[0m      [1mSpeed[0m                                               
+  [99m0/[93m7[0m[0m   [99m        -        [0m  [99m   -    [0m                                             
+[94mEpoch:[0m   0.0% |                                                                |2022-01-07 12:09:47.031 | [31m[1m     ERROR      [0m | Unknown exception: Expected to mark a variable ready only once. This error is caused by one of the following reasons: 1) Use of a module parameter outside the `forward` function. Please make sure model parameters are not shared across multiple concurrent forward-backward passes. or try to use _set_static_graph() as a workaround if this module graph does not change during training loop.2) Reused parameters in multiple reentrant backward passes. For example, if you use multiple `checkpoint` functions to wrap the same part of your model, it would result in the same set of parameters been used by different reentrant backward passes multiple times, and hence marking a variable ready multiple times. DDP does not support such use cases in default. You can try to use _set_static_graph() as a workaround if your module graph does not change over iterations.
+Parameter at index 49 with name local_decoder.weight has been marked as ready twice. This means that multiple autograd engine  hooks have fired for this particular parameter during this iteration. with traceback Traceback (most recent call last):
+  File "/home/isabella/.bittensor/bittensor/bittensor/_neuron/text/template_miner/neuron_impl.py", line 217, in run
+    output.loss.backward(retain_graph = True) # Accumulates gradients on the nucleus.
+  File "/home/isabella/.local/lib/python3.8/site-packages/torch/_tensor.py", line 307, in backward
+    torch.autograd.backward(self, gradient, retain_graph, create_graph, inputs=inputs)
+  File "/home/isabella/.local/lib/python3.8/site-packages/torch/autograd/__init__.py", line 154, in backward
+    Variable._execution_engine.run_backward(
+RuntimeError: Expected to mark a variable ready only once. This error is caused by one of the following reasons: 1) Use of a module parameter outside the `forward` function. Please make sure model parameters are not shared across multiple concurrent forward-backward passes. or try to use _set_static_graph() as a workaround if this module graph does not change during training loop.2) Reused parameters in multiple reentrant backward passes. For example, if you use multiple `checkpoint` functions to wrap the same part of your model, it would result in the same set of parameters been used by different reentrant backward passes multiple times, and hence marking a variable ready multiple times. DDP does not support such use cases in default. You can try to use _set_static_graph() as a workaround if your module graph does not change over iterations.
+Parameter at index 49 with name local_decoder.weight has been marked as ready twice. This means that multiple autograd engine  hooks have fired for this particular parameter during this iteration.
+
+2022-01-07 12:09:47.067 | [1m      INFO      [0m | Restarting from last saved state.
+2022-01-07 12:09:47.093 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 0, Rank 1
+[K[F[K[F [1mIters[0m    [1mElapsed Time[0m      [1mSpeed[0m                                               
+  [99m0/[93m7[0m[0m   [99m        -        [0m  [99m   -    [0m                                             
+[94mEpoch:[0m   0.0% |                                                                |2022-01-07 12:09:47.252 | [31m[1m     ERROR      [0m | Unknown exception: Expected to mark a variable ready only once. This error is caused by one of the following reasons: 1) Use of a module parameter outside the `forward` function. Please make sure model parameters are not shared across multiple concurrent forward-backward passes. or try to use _set_static_graph() as a workaround if this module graph does not change during training loop.2) Reused parameters in multiple reentrant backward passes. For example, if you use multiple `checkpoint` functions to wrap the same part of your model, it would result in the same set of parameters been used by different reentrant backward passes multiple times, and hence marking a variable ready multiple times. DDP does not support such use cases in default. You can try to use _set_static_graph() as a workaround if your module graph does not change over iterations.
+Parameter at index 49 with name local_decoder.weight has been marked as ready twice. This means that multiple autograd engine  hooks have fired for this particular parameter during this iteration. with traceback Traceback (most recent call last):
+  File "/home/isabella/.bittensor/bittensor/bittensor/_neuron/text/template_miner/neuron_impl.py", line 217, in run
+    output.loss.backward(retain_graph = True) # Accumulates gradients on the nucleus.
+  File "/home/isabella/.local/lib/python3.8/site-packages/torch/_tensor.py", line 307, in backward
+    torch.autograd.backward(self, gradient, retain_graph, create_graph, inputs=inputs)
+  File "/home/isabella/.local/lib/python3.8/site-packages/torch/autograd/__init__.py", line 154, in backward
+    Variable._execution_engine.run_backward(
+RuntimeError: Expected to mark a variable ready only once. This error is caused by one of the following reasons: 1) Use of a module parameter outside the `forward` function. Please make sure model parameters are not shared across multiple concurrent forward-backward passes. or try to use _set_static_graph() as a workaround if this module graph does not change during training loop.2) Reused parameters in multiple reentrant backward passes. For example, if you use multiple `checkpoint` functions to wrap the same part of your model, it would result in the same set of parameters been used by different reentrant backward passes multiple times, and hence marking a variable ready multiple times. DDP does not support such use cases in default. You can try to use _set_static_graph() as a workaround if your module graph does not change over iterations.
+Parameter at index 49 with name local_decoder.weight has been marked as ready twice. This means that multiple autograd engine  hooks have fired for this particular parameter during this iteration.
+
+2022-01-07 12:09:47.265 | [1m      INFO      [0m | Restarting from last saved state.
+  0%|          | 0/27 [00:00<?, ?it/s]  0%|          | 0/27 [00:00<?, ?it/s]  4%|▎         | 1/27 [00:00<00:04,  5.64it/s]  4%|▎         | 1/27 [00:00<00:04,  5.65it/s]  7%|▋         | 2/27 [00:00<00:04,  5.71it/s]  7%|▋         | 2/27 [00:00<00:05,  4.87it/s] 11%|█         | 3/27 [00:00<00:04,  4.81it/s] 11%|█         | 3/27 [00:00<00:04,  5.21it/s] 15%|█▍        | 4/27 [00:00<00:04,  5.22it/s] 15%|█▍        | 4/27 [00:00<00:04,  5.35it/s] 19%|█▊        | 5/27 [00:00<00:04,  5.38it/s] 19%|█▊        | 5/27 [00:00<00:04,  5.41it/s] 22%|██▏       | 6/27 [00:01<00:03,  5.49it/s] 22%|██▏       | 6/27 [00:01<00:03,  5.64it/s] 26%|██▌       | 7/27 [00:01<00:03,  5.69it/s] 26%|██▌       | 7/27 [00:01<00:03,  5.66it/s] 30%|██▉       | 8/27 [00:01<00:03,  5.82it/s] 30%|██▉       | 8/27 [00:01<00:03,  5.78it/s] 33%|███▎      | 9/27 [00:01<00:03,  5.76it/s] 33%|███▎      | 9/27 [00:01<00:03,  5.75it/s] 37%|███▋      | 10/27 [00:01<00:02,  5.85it/s] 37%|███▋      | 10/27 [00:01<00:02,  5.68it/s] 41%|████      | 11/27 [00:01<00:02,  5.91it/s] 41%|████      | 11/27 [00:01<00:02,  5.73it/s] 44%|████▍     | 12/27 [00:02<00:02,  5.88it/s] 44%|████▍     | 12/27 [00:02<00:02,  5.73it/s] 48%|████▊     | 13/27 [00:02<00:02,  5.86it/s] 48%|████▊     | 13/27 [00:02<00:02,  5.78it/s] 52%|█████▏    | 14/27 [00:02<00:02,  5.76it/s] 52%|█████▏    | 14/27 [00:02<00:02,  5.85it/s] 56%|█████▌    | 15/27 [00:02<00:02,  5.87it/s] 56%|█████▌    | 15/27 [00:02<00:02,  5.78it/s] 59%|█████▉    | 16/27 [00:02<00:01,  5.74it/s] 59%|█████▉    | 16/27 [00:02<00:01,  5.76it/s] 63%|██████▎   | 17/27 [00:02<00:01,  5.73it/s] 63%|██████▎   | 17/27 [00:03<00:01,  5.77it/s] 67%|██████▋   | 18/27 [00:03<00:01,  5.73it/s] 67%|██████▋   | 18/27 [00:03<00:01,  5.78it/s] 70%|███████   | 19/27 [00:03<00:01,  5.85it/s] 70%|███████   | 19/27 [00:03<00:01,  5.75it/s] 74%|███████▍  | 20/27 [00:03<00:01,  5.93it/s] 74%|███████▍  | 20/27 [00:03<00:01,  5.70it/s] 78%|███████▊  | 21/27 [00:03<00:01,  5.89it/s] 78%|███████▊  | 21/27 [00:03<00:01,  5.70it/s] 81%|████████▏ | 22/27 [00:03<00:00,  5.87it/s] 81%|████████▏ | 22/27 [00:03<00:00,  5.71it/s] 85%|████████▌ | 23/27 [00:04<00:00,  5.84it/s] 89%|████████▉ | 24/27 [00:04<00:00,  5.96it/s] 85%|████████▌ | 23/27 [00:04<00:00,  5.75it/s] 93%|█████████▎| 25/27 [00:04<00:00,  5.90it/s] 89%|████████▉ | 24/27 [00:04<00:00,  5.77it/s] 96%|█████████▋| 26/27 [00:04<00:00,  5.94it/s] 93%|█████████▎| 25/27 [00:04<00:00,  5.74it/s]100%|██████████| 27/27 [00:04<00:00,  5.86it/s]100%|██████████| 27/27 [00:04<00:00,  5.76it/s] 96%|█████████▋| 26/27 [00:04<00:00,  5.73it/s]100%|██████████| 27/27 [00:04<00:00,  5.79it/s]100%|██████████| 27/27 [00:04<00:00,  5.69it/s]2022-01-07 12:09:52.642 | [32m[1m    SUCCESS     [0m | Reloaded model:     [34m/home/isabella/.bittensor/miners/default/default/template_neuron/model.torch[0m
+
+ [1mIters[0m    [1mElapsed Time[0m      [1mSpeed[0m                                               
+  [99m0/[93m7[0m[0m   [99m        -        [0m  [99m   -    [0m                                             
+[94mEpoch:[0m   0.0% |                                                                |2022-01-07 12:09:52.839 | [32m[1m    SUCCESS     [0m | Reloaded model:     [34m/home/isabella/.bittensor/miners/default/default/template_neuron/model.torch[0m
+
+ [1mIters[0m    [1mElapsed Time[0m      [1mSpeed[0m                                               
+  [99m0/[93m7[0m[0m   [99m        -        [0m  [99m   -    [0m                                             
+[94mEpoch:[0m   0.0% |                                                                |2022-01-07 12:09:53.039 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 0, Rank 0
+2022-01-07 12:09:53.198 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 0, Rank 0
+2022-01-07 12:09:53.356 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 0, Rank 0
+2022-01-07 12:09:53.372 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 0, Rank 1
+2022-01-07 12:09:53.531 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 0, Rank 1
+2022-01-07 12:09:53.690 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 0, Rank 1
+2022-01-07 12:09:53.708 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 1, Rank 0
+2022-01-07 12:09:53.947 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 1, Rank 0
+2022-01-07 12:09:54.116 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 1, Rank 0
+2022-01-07 12:09:54.125 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 1, Rank 1
+2022-01-07 12:09:54.318 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 1, Rank 1
+2022-01-07 12:09:54.497 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 1, Rank 1
+2022-01-07 12:09:54.514 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 2, Rank 0
+2022-01-07 12:09:54.739 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 2, Rank 0
+2022-01-07 12:09:54.905 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 2, Rank 0
+2022-01-07 12:09:54.911 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 2, Rank 1
+2022-01-07 12:09:55.137 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 2, Rank 1
+2022-01-07 12:09:55.309 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 2, Rank 1
+2022-01-07 12:09:55.319 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 3, Rank 0
+2022-01-07 12:09:55.555 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 3, Rank 0
+2022-01-07 12:09:55.737 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 3, Rank 1
+2022-01-07 12:09:55.737 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 3, Rank 0
+2022-01-07 12:09:55.919 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 3, Rank 1
+2022-01-07 12:09:56.114 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 3, Rank 1
+2022-01-07 12:09:56.133 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 4, Rank 0
+2022-01-07 12:09:56.371 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 4, Rank 0
+2022-01-07 12:09:56.515 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 4, Rank 0
+2022-01-07 12:09:56.518 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 4, Rank 1
+2022-01-07 12:09:56.704 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 4, Rank 1
+2022-01-07 12:09:56.908 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 4, Rank 1
+2022-01-07 12:09:56.924 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 5, Rank 0
+2022-01-07 12:09:57.164 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 5, Rank 0
+2022-01-07 12:09:57.321 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 5, Rank 0
+2022-01-07 12:09:57.328 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 5, Rank 1
+2022-01-07 12:09:57.503 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 5, Rank 1
+2022-01-07 12:09:57.693 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 5, Rank 1
+2022-01-07 12:09:57.711 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 6, Rank 0
+2022-01-07 12:09:57.870 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 6, Rank 0
+2022-01-07 12:09:58.062 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 6, Rank 0
+2022-01-07 12:09:58.080 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 6, Rank 1
+2022-01-07 12:09:58.247 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 6, Rank 1
+2022-01-07 12:09:58.405 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 6, Rank 1
+2022-01-07 12:09:58.495 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 7, Rank 0
+2022-01-07 12:09:58.736 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 7, Rank 0
+2022-01-07 12:09:58.757 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 7, Rank 1
+2022-01-07 12:09:59.046 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 7, Rank 1
+2022-01-07 12:09:59.187 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 7, Rank 1
+2022-01-07 12:09:59.242 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 7, Rank 0
+2022-01-07 12:09:59.429 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 8, Rank 1
+2022-01-07 12:09:59.628 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 8, Rank 1
+2022-01-07 12:09:59.775 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 8, Rank 1
+2022-01-07 12:10:00.516 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 9, Rank 1
+2022-01-07 12:10:00.697 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 8, Rank 0
+2022-01-07 12:10:00.998 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 8, Rank 0
+2022-01-07 12:10:01.044 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 9, Rank 1
+2022-01-07 12:10:01.730 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 9, Rank 1
+2022-01-07 12:10:02.202 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 8, Rank 0
+2022-01-07 12:10:02.883 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 10, Rank 1
+2022-01-07 12:10:03.157 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 10, Rank 1
+2022-01-07 12:10:03.715 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 9, Rank 0
+2022-01-07 12:10:03.969 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 9, Rank 0
+2022-01-07 12:10:04.573 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 10, Rank 1
+2022-01-07 12:10:04.991 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 9, Rank 0
+2022-01-07 12:10:05.774 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 10, Rank 0
+2022-01-07 12:10:05.870 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 11, Rank 1
+2022-01-07 12:10:06.052 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 10, Rank 0
+2022-01-07 12:10:06.241 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 11, Rank 1
+2022-01-07 12:10:07.118 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 10, Rank 0
+2022-01-07 12:10:07.273 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 11, Rank 1
+2022-01-07 12:10:08.142 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 12, Rank 1
+2022-01-07 12:10:08.236 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 11, Rank 0
+2022-01-07 12:10:08.351 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 12, Rank 1
+2022-01-07 12:10:08.564 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 11, Rank 0
+2022-01-07 12:10:09.210 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 12, Rank 1
+2022-01-07 12:10:09.642 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 11, Rank 0
+2022-01-07 12:10:10.307 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 12, Rank 0
+2022-01-07 12:10:10.379 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 13, Rank 1
+2022-01-07 12:10:10.588 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 12, Rank 0
+2022-01-07 12:10:10.775 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 13, Rank 1
+2022-01-07 12:10:11.206 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 12, Rank 0
+2022-01-07 12:10:11.928 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 13, Rank 1
+[K[F[K[F [1mIters[0m    [1mElapsed Time[0m      [1mSpeed[0m                                               
+  [99m1/[93m7[0m[0m   [99m00:00:19<[93m00:01:55[0m[0m  [99m0.05it/s[0m                                             
+[94mEpoch:[0m  14.3% |[97m#[0m[97m#[0m[97m#[0m[97m#[0m[97m#[0m[97m#[0m[97m#[0m[97m#[0m[97m#[0m                                                       |2022-01-07 12:10:12.713 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 13, Rank 0
+2022-01-07 12:10:12.931 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 13, Rank 0
+2022-01-07 12:10:13.386 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 14, Rank 1
+2022-01-07 12:10:13.396 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 13, Rank 0
+2022-01-07 12:10:13.621 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 14, Rank 1
+2022-01-07 12:10:14.783 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 14, Rank 1
+[K[F[K[F [1mIters[0m    [1mElapsed Time[0m      [1mSpeed[0m                                               
+  [99m0/[93m7[0m[0m   [99m        -        [0m  [99m   -    [0m                                             
+[94mEpoch:[0m   0.0% |                                                                |2022-01-07 12:10:15.619 | [31m[1m     ERROR      [0m | Unknown exception: 'module.peer_weights' with traceback Traceback (most recent call last):
+  File "/home/isabella/.bittensor/bittensor/bittensor/_neuron/text/template_miner/neuron_impl.py", line 263, in run
+    self.logs (
+  File "/home/isabella/.bittensor/bittensor/bittensor/_neuron/text/template_miner/neuron_impl.py", line 502, in logs
+    normalized_peer_weights = F.softmax (self.nucleus.state_dict()['module.peer_weights'], dim=0)
+KeyError: 'module.peer_weights'
+
+2022-01-07 12:10:15.645 | [1m      INFO      [0m | Restarting from last saved state.
+2022-01-07 12:10:16.136 | [32m[1m    SUCCESS     [0m | Forward pass:       batches_count 15, Rank 1
+2022-01-07 12:10:16.380 | [32m[1m    SUCCESS     [0m | Backward pass:      batches_count 15, Rank 1
+2022-01-07 12:10:17.545 | [32m[1m    SUCCESS     [0m | Optimizer pass:     batches_count 15, Rank 1
+  0%|          | 0/27 [00:00<?, ?it/s]  4%|▎         | 1/27 [00:00<00:12,  2.12it/s]  4%|▎         | 1/27 [00:00<00:17,  1.49it/s][K[F[K[F [1mIters[0m    [1mElapsed Time[0m      [1mSpeed[0m                                               
+  [99m1/[93m7[0m[0m   [99m00:00:19<[93m00:01:55[0m[0m  [99m0.05it/s[0m                                             
+[94mEpoch:[0m  14.3% |[97m#[0m[97m#[0m[97m#[0m[97m#[0m[97m#[0m[97m#[0m[97m#[0m[97m#[0m[97m#[0m                                                       |<class 'KeyboardInterrupt'>  <traceback object at 0x7f22583adb00>
+2022-01-07 12:10:18.872 | [32m[1m    SUCCESS     [0m | Axon Stopped:       [34m[::]:8091[0m
+
+Traceback (most recent call last):
+  File "./bittensor/_neuron/text/template_miner/main.py", line 3, in <module>
+    template = bittensor.neurons.template_miner.neuron().run_parallel()
+  File "/home/isabella/.bittensor/bittensor/bittensor/_neuron/text/template_miner/neuron_impl.py", line 99, in run_parallel
+    mp.spawn(self.run,
+  File "/home/isabella/.local/lib/python3.8/site-packages/torch/multiprocessing/spawn.py", line 230, in spawn
+    return start_processes(fn, args, nprocs, join, daemon, start_method='spawn')
+  File "/home/isabella/.local/lib/python3.8/site-packages/torch/multiprocessing/spawn.py", line 188, in start_processes
+    while not context.join():
+  File "/home/isabella/.local/lib/python3.8/site-packages/torch/multiprocessing/spawn.py", line 99, in join
+    ready = multiprocessing.connection.wait(
+  File "/usr/lib/python3.8/multiprocessing/connection.py", line 931, in wait
+    ready = selector.select(timeout)
+  File "/usr/lib/python3.8/selectors.py", line 415, in select
+    fd_event_list = self._selector.poll(timeout)
+KeyboardInterrupt
+None None None
+2022-01-07 12:10:18.940 | [32m[1m    SUCCESS     [0m | Axon Stopped:       [34m[::]:8091[0m

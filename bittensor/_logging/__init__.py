@@ -254,9 +254,9 @@ class logging:
         code_str = "<" + code_color + ">" + code_string + "</" + code_color + ">"
 
         if is_response:
-            inputs = str(list(outputs)) if outputs != None else '[x]'
+            inputs = str(list(outputs)) if outputs != None else '[x]' + str(inputs[-1])
         else:
-            inputs = str(list(inputs)) if inputs != None else '[x]'
+            inputs = str(list(inputs)) if inputs != None else '[x]' + str(inputs[-1])
         inputs = inputs.center(15)
 
         rpc_message = message if message != None else 'None'

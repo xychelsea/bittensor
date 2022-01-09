@@ -339,7 +339,7 @@ class Receptor(nn.Module):
         
         return True, request
 
-    def collect_future(self, request):
+    def collect_future(self, request, rank):
         r"""Get the result of the grpc request. 
             The result would update request.response.
 
@@ -360,14 +360,14 @@ class Receptor(nn.Module):
             
         # ---- Catch GRPC Errors ----
         except grpc.RpcError as rpc_error_call:
-            request.code, request.message =  self.rpc_exception_handler(request, rpc_error_call)
+            request.code, request.message =  self.rpc_exception_handler(request, rpc_error_call, rank)
             return False, request
 
         # ---- Catch Unknown Errors ----
         except Exception as e:
             request.code = bittensor.proto.ReturnCode.UnknownException
             request.message = str(e)
-            self.request_log(request = request, is_response = True, inputs = list(request.inputs.shape))
+            self.request_log(request = request, is_response = True, inputs = list(request.inputs.shape) + [rank])
             return False, request
 
         return True, request
@@ -419,7 +419,7 @@ class Receptor(nn.Module):
         
         return True, request
 
-    def deserialize_forward_response(self, request):
+    def deserialize_forward_response(self, request, rank):
         r"""Deserialization for the forward request.
             The result would update request.output.
 
@@ -462,7 +462,7 @@ class Receptor(nn.Module):
 
         # ---- Return ----
         request.code = request.response.return_code
-        self.request_log(request = request, is_response = True, inputs = list(request.inputs.shape), outputs = list(outputs.shape))
+        self.request_log(request = request, is_response = True, inputs = list(request.inputs.shape), outputs = list(outputs.shape) + [rank])
         self.stats.codes[request.code] += 1
         
         return True, request 
@@ -583,7 +583,7 @@ class Receptor(nn.Module):
         request.code = bittensor.proto.ReturnCode.Success
         return request
         
-    def make_request_call(self, request, timeout):
+    def make_request_call(self, request, timeout, rank):
         r""" Torch.nn.Module forward call: Triggers the grpc call to the remote endpoint. (calls the Forward method on an Axon terminal.)
             The resulted future of forward call was stored in forward_request.
 
@@ -612,7 +612,7 @@ class Receptor(nn.Module):
                                         ('bittensor-version',str(bittensor.__version_as_int__)),
                                         ('request_type', str(bittensor.proto.RequestType.FORWARD)),
                                         ))
-                request.future.add_done_callback(lambda z : self.handle_request_response(request))
+                request.future.add_done_callback(lambda z : self.handle_request_response(request, rank = rank))
             else:
                 self.stats.backward_qps.update(1)
                 self.stats.backward_bytes_out.update(sys.getsizeof(request.grpc_request))
@@ -626,12 +626,12 @@ class Receptor(nn.Module):
                                         ))
             
             request.code = bittensor.proto.ReturnCode.Success
-            self.request_log(request = request, is_response = False, inputs = list(request.serialized_inputs.shape))
+            self.request_log(request = request, is_response = False, inputs = list(request.serialized_inputs.shape) + [rank] )
             return request
         
         # ---- Catch GRPC Errors ----
         except grpc.RpcError as rpc_error_call:
-            request.code, request.message =  self.rpc_exception_handler(request, rpc_error_call)
+            request.code, request.message =  self.rpc_exception_handler(request, rpc_error_call, rank)
             self.request_log(request = request, is_response = False, inputs = list(request.serialized_inputs.shape))
             return request
 
@@ -642,7 +642,7 @@ class Receptor(nn.Module):
             self.request_log(request = request, is_response = False, inputs = list(request.serialized_inputs.shape))
             return request
 
-    def handle_request_response(self, request):
+    def handle_request_response(self, request, rank):
         r""" Handle all the getting result checking, and processing the response.
 
             Args:
@@ -669,8 +669,8 @@ class Receptor(nn.Module):
             request.end_time = clock.time() - request.start_time
             return request.zeros, request.code, request.end_time
 
-        deserializer = self.deserialize_forward_response if not request.backward else self.deserialize_backward_response
-        response_handling_funs = [self.collect_future, self.check_response, deserializer]
+        deserializer = lambda x : self.deserialize_forward_response(x, rank) if not request.backward else self.deserialize_backward_response
+        response_handling_funs = [lambda x : self.collect_future(x, rank), self.check_response, deserializer]
 
         for fun in response_handling_funs:
             check, request = fun(request)
@@ -680,9 +680,8 @@ class Receptor(nn.Module):
         
         request.end_time = clock.time()-request.start_time
         return request.outputs if check else request.zeros, request.code, request.end_time
- 
 
-    def rpc_exception_handler(self, request, rpc_error_call):
+    def rpc_exception_handler(self, request, rpc_error_call, rank):
         r""" Handle the rpc exception call according to grpc status code.
         """
         grpc_code = rpc_error_call.code()
@@ -702,7 +701,7 @@ class Receptor(nn.Module):
         elif grpc_code == grpc.StatusCode.UNAUTHENTICATED:
             request.code = bittensor.proto.ReturnCode.Unauthenticated
             request.message = 'grpc.StatusCode.UNAUTHENTICATED'+': '+ rpc_error_call.details()
-            self.request_log(request = request, is_response = True, inputs = list(request.inputs.shape))
+            self.request_log(request = request, is_response = True, inputs = list(request.inputs.shape) + [rank])
             return request.code, request.message
         else:
             request.code = bittensor.proto.ReturnCode.UnknownException
