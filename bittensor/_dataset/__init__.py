@@ -112,6 +112,7 @@ class dataset:
         """
         assert config.dataset.batch_size > 0, 'Batch size must be larger than 0'
         assert config.dataset.block_size > 0, 'Block size must be larger than 0'
+        assert config.dataset.block_size < 1024, 'Block size must less than 1024'
         assert config.dataset.max_corpus_size > 0, 'max_corpus_size must be larger than 0'
         assert config.dataset.num_workers >= 0, 'num_workers must be equal to or larger than 0'
         assert isinstance(config.dataset.save_dataset, bool) , 'save_dataset must be True/False only'
