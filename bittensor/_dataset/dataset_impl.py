@@ -153,6 +153,9 @@ class GenesisTextDataset( Dataset ):
     def close(self):
         self.data_queue.close()
 
+    def __del__(self):
+        self.close()
+
     def get_random_directories(self):
         r""" Getting directories from a random dataset_hash
         Where a directory could be leading to a data file or a directory file 

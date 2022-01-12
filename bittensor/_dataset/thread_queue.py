@@ -84,4 +84,3 @@ class ThreadQueue():
 
     def close(self):
         self.producer.stop()
-        self.producer.join()

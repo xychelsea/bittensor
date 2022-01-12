@@ -126,6 +126,8 @@ class Nucleus(nn.Module):
 
         # inputs.shape = [batch_size, sequence_len]
         sequence_len = inputs.shape[1]
+        print(inputs.shape)
+        print(sequence_len)
 
         # src_mask: attention mask adds -inf to positions not allowed to attend, preventing forward-looking when
         #           predicting each token in the sequence.
