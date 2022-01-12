@@ -146,7 +146,7 @@ class GenesisTextDataset( Dataset ):
             
         self.data_queue = ThreadQueue(
             producer_target = self.dataloader,
-            producer_arg = (1000,),
+            producer_arg = (1,),
             buffer_size = 2
         )
 
@@ -451,7 +451,7 @@ class GenesisTextDataset( Dataset ):
             Returns:
                 torch.tensor(dix)
         """
-        start_idx = (idx * self.block_size) % len(self.data)
+        start_idx = (idx * self.block_size) % len(self.data )
         end_idx = start_idx + self.block_size
         if self.no_tokenizer == False:
             tokenized_text = torch.tensor(self.tokenizer(" ".join(self.data[start_idx:end_idx]), padding=True, truncation=True)['input_ids'], dtype=torch.long)

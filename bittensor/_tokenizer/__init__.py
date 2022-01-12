@@ -17,7 +17,7 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
 # DEALINGS IN THE SOFTWARE.
 
-from transformers import GPT2Tokenizer
+from transformers import GPT2Tokenizer,AutoTokenizer
 import bittensor 
 
 class tokenizer:
@@ -43,35 +43,15 @@ class tokenizer:
     def get_tokenizer_for_version( cls, version = bittensor.__version__ ):
         """ Return the GPT2 tokenizer with bittersor's special tokens
         """
-        _tokenizer = GPT2Tokenizer.from_pretrained("gpt2", local_files_only=False)
-        _tokenizer.padding_side = "left"
-        _tokenizer.add_prefix_space = False
-        _tokenizer.add_special_tokens({'bos_token': "[BOS]"}) # A special token representing the beginning of a sentence.
-        _tokenizer.add_special_tokens({'eos_token': "[EOS]"}) # A special token representing the end of a sentence.
-        _tokenizer.add_special_tokens({'unk_token': "[UNK]"}) # A special token representing an out-of-vocabulary token.
-        _tokenizer.add_special_tokens({'sep_token': "[SEP]"}) # A special token separating two different sentences in the same input (used by BERT for instance)
-        _tokenizer.add_special_tokens({'pad_token': "[PAD]"}) # A special token used to make arrays of tokens the same size for batching purpose. Will then be ignored by attention mechanisms or loss computation.
-        _tokenizer.add_special_tokens({'cls_token': "[CLS]"}) # A special token representing the class of the input (used by BERT for instance).
-        _tokenizer.add_special_tokens({'mask_token': "[MASK]"}) # A special token representing a masked token (used by masked-language modeling pretraining objectives, like BERT).
-        additional_special_tokens = [
-            "<s>NOTUSED",  # Used by BARThez
-            "</s>NOTUSED", # Used by BARThez
-            "<eop>", # Used by MarianMT
-            "<eod>", # Used by MarianMT
-            "<formula>", # Used by Transformer XL
-            "<mask_1>" # Used by Pegasus
-            "<special0>", # Used by XLM
-            "<special1>", # Used by XLM
-            "<special2>", # Used by XLM
-            "<special3>", # Used by XLM
-            "<special4>", # Used by XLM
-            "<special5>", # Used by XLM
-            "<special6>", # Used by XLM
-            "<special7>", # Used by XLM
-            "<special8>", # Used by XLM
-            "<special9>", # Used by XLM
-        ]
-        _tokenizer.additional_special_tokens = additional_special_tokens
+        version_split = version.split(".")
+        version_as_int = (100 * int(version_split[0])) + (10 * int(version_split[1])) + (1 * int(version_split[2]))
+        if version_as_int < 203:
+            _tokenizer = GPT2Tokenizer.from_pretrained("gpt2", local_files_only=False)
+            _tokenizer = bittensor.tokenizer.prep_tokenizer(_tokenizer)
+
+        else:
+            _tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-1.3B", local_files_only=False, model_max_length =2048)
+            _tokenizer = bittensor.tokenizer.prep_tokenizer(_tokenizer)
         return _tokenizer
     
     @staticmethod
