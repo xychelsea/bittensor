@@ -146,7 +146,7 @@ class GenesisTextDataset( Dataset ):
             
         self.data_queue = ThreadQueue(
             producer_target = self.dataloader,
-            producer_arg = (1,),
+            producer_arg = (10,),
             buffer_size = 2
         )
 
