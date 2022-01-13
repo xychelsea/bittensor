@@ -565,7 +565,7 @@ class Metagraph( torch.nn.Module ):
         try:
             index = self.uids.tolist()
             columns = [ 'uid', 'active', 'stake', 'rank', 'trust', 'consensus', 'incentive', 'dividends', 'emission']
-            df = pandas.DataFrame( columns = columns, index = index )
+            dataframe = pandas.DataFrame(columns = columns, index = index)
             for uid in self.uids.tolist():
                 v = {
                     'uid': self.uids[uid].item(),
@@ -576,10 +576,10 @@ class Metagraph( torch.nn.Module ):
                     'consensus': self.consensus[uid].item(),             
                     'incentive': self.incentive[uid].item(),             
                     'dividends': self.dividends[uid].item(),             
-                    'emission': self.emission[uid].item()}
-                df.loc[uid] = pandas.Series(v)
-            df['uid'] = df.index
-            return df
+                    'emission': self.emission[uid].item()
+                }
+                dataframe.loc[uid] = pandas.Series( v )
+            dataframe['uid'] = dataframe.index
         except Exception as e:
             bittensor.logging.error('failed metagraph.to_dataframe()', str(e))
             return pandas.DataFrame()
