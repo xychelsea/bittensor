@@ -45,13 +45,15 @@ class tokenizer:
         """
         version_split = version.split(".")
         version_as_int = (100 * int(version_split[0])) + (10 * int(version_split[1])) + (1 * int(version_split[2]))
-        if version_as_int < 203:
-            _tokenizer = GPT2Tokenizer.from_pretrained("gpt2", local_files_only=False)
-            _tokenizer = bittensor.tokenizer.prep_tokenizer(_tokenizer)
 
-        else:
-            _tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-1.3B", local_files_only=False, model_max_length =2048)
-            _tokenizer = bittensor.tokenizer.prep_tokenizer(_tokenizer)
+        #TODO (const): Enable tokenizer versioning
+        #if version_as_int > 203:
+        #_tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-1.3B", local_files_only=False, model_max_length =2048)
+        #_tokenizer = bittensor.tokenizer.prep_tokenizer(_tokenizer)
+
+        _tokenizer = GPT2Tokenizer.from_pretrained("gpt2", local_files_only=False)
+        _tokenizer = bittensor.tokenizer.prep_tokenizer(_tokenizer)
+
         return _tokenizer
     
     @staticmethod
