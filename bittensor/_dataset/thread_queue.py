@@ -84,3 +84,7 @@ class ThreadQueue():
 
     def close(self):
         self.producer.stop()
+        try:
+            self.producer.join(timeout=2)
+        except Exception:
+            pass
