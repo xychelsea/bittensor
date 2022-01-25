@@ -217,6 +217,7 @@ class DDPNeuronTrain:
                         # ---- Backward pass ----
                         output.loss = output.local_target_loss + output.distillation_loss + output.remote_target_loss
                         output.loss.backward(retain_graph = True) # Accumulates gradients on the nucleus.
+                        clip_grad_norm_(self.nucleus.parameters(), self.config.neuron.clip_gradients)
                         
                         # ---- Apply and zero accumulated gradients.
                         self.optimizer.step() 
@@ -362,7 +363,7 @@ class DDPNeuronTrain:
             self.nucleus = DDP(self.nucleus,  device_ids=[rank])
         else:
             self.nucleus = DDP(self.nucleus, bucket_cap_mb = 10000000)
-            self.nucleus.register_comm_hook(state=None, hook=self.clip_grad_hook)
+            # self.nucleus.register_comm_hook(state=None, hook=self.clip_grad_hook)
 
         # ---- Load optimizer.
         self.optimizer = torch.optim.SGD(
