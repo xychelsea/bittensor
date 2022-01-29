@@ -30,8 +30,11 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     
 with open('requirements.txt') as requirements_file:
     # remove any lines that use git syntax
-    lines = [str(line) for line in requirements_file if "git+" not in line]
-    install_requires = [str(requirement) for requirement in parse_requirements(lines)]
+    def remove_git(line: str):
+        return "git+" not in line
+        
+    filtered_lines = filter(remove_git, requirements_file)
+    install_requires = [str(requirement) for requirement in parse_requirements(filtered_lines)]
 
 # loading version from setup.py
 with codecs.open(os.path.join(here, 'bittensor/__init__.py'), encoding='utf-8') as init_file:
