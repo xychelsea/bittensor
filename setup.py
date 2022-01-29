@@ -28,8 +28,10 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
     
-#with open('requirements.txt') as requirements_file:
-#   install_requires = [str(requirement) for requirement in parse_requirements(requirements_file)]
+with open('requirements.txt') as requirements_file:
+    # remove any lines that use git syntax
+    lines = [str(line) for line in requirements_file if "git+" not in line]
+    install_requires = [str(requirement) for requirement in parse_requirements(lines)]
 
 # loading version from setup.py
 with codecs.open(os.path.join(here, 'bittensor/__init__.py'), encoding='utf-8') as init_file:
@@ -48,7 +50,7 @@ setup(
     include_package_data=True,
     author_email='',
     license='MIT',
-    #install_requires=install_requires,
+    install_requires=install_requires,
     scripts=['bin/btcli'],
     classifiers=[
         'Development Status :: 3 - Alpha',
