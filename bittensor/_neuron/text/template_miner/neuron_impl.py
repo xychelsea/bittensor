@@ -34,7 +34,7 @@ import wandb
 from termcolor import colored
 from qqdm import qqdm, format_str
 from loguru import logger
-
+from scipy import stats
 from bittensor._metagraph import metagraph
 logger = logger.opt(colors=True)
 
@@ -165,7 +165,7 @@ class Neuron:
                         while block >= current_block:
                             # ---- Forward pass ----
                             inputs = next( self.dataset )
-                            output, individual_losses = self.nucleus.remote_forward (
+                            output = self.nucleus.remote_forward (
                                 inputs = inputs.to( self.device ),
                                 training = True,
                             )
@@ -186,15 +186,6 @@ class Neuron:
                             self.optimizer.zero_grad()
                             current_block = self.subtensor.get_current_block()
                             
-
-                            for key in list(individual_losses.keys()):
-
-                                print('losses',key, individual_losses[key])
-                                if key in list(total_losses_individ.keys()):
-                                    total_losses_individ[key.item()] += individual_losses[key]
-                                else:
-                                    total_losses_individ[key.item()] = individual_losses[key]
-
                             # ---- Aggrigate outputs and losses 
                             total_local_target_epoch_loss += output.local_target_loss.item()
                             total_distillation_epoch_loss += output.distillation_loss.item()
@@ -202,16 +193,14 @@ class Neuron:
                             total_local_epoch_acc += output.local_accuracy
                             self.stats.epoch_data_size += inputs.nelement()
                             batches_count += 1
-                            
-                            for index, score in enumerate(scores):
-                                print('fisher score',index, score)
+
 
                             # ---- Expand ema_scores tensor if the chain grew and aggrigate the score
                             chain_growth = max(scores.shape[0] - self.stats.ema_scores.shape[0], 0)
                             if chain_growth > 0:
                                 self.stats.ema_scores = torch.nn.Parameter(torch.cat( [self.stats.ema_scores, torch.zeros([chain_growth], dtype=torch.float32, device = self.device)]), requires_grad=False)
-                            self.stats.ema_scores = self.fisher_ema_decay * self.stats.ema_scores + (1 - self.fisher_ema_decay) * scores
-                            self.stats.scores = scores
+                            self.stats.ema_scores = self.fisher_ema_decay * self.stats.ema_scores.detach() + (1 - self.fisher_ema_decay) * scores.detach()
+                            self.stats.scores = scores.detach()
 
 
                         # ---- Sync with metagraph if the current block >= last synced block + sync block time 
@@ -454,8 +443,8 @@ class Neuron:
         try:
             k = min( self.config.neuron.n_topk_peer_weights, self.metagraph.n.item() )
             inactive_uids = torch.where(self.metagraph.active == 0)[0]
-            self.stats.ema_scores[inactive_uids] = 0
-            topk_scores, topk_uids = bittensor.unbiased_topk( torch.relu(self.stats.ema_scores) , k = k )
+            self.stats.ema_scores[inactive_uids] = -1
+            topk_scores, topk_uids = bittensor.unbiased_topk( torch.sigmoid(self.stats.ema_scores) , k = k )
             topk_uids = topk_uids.detach().to('cpu')
             topk_scores = topk_scores.detach().to('cpu')
             self.subtensor.set_weights(
@@ -510,14 +499,18 @@ class Neuron:
             peer_weights['peer_weights/uid_{}'.format(uid)]=self.nucleus.peer_weights.detach()[uid]
         progress_bar.set_infos( info )
 
-        combination_tensor = torch.zeros(2,27)
+        combination_tensor = torch.zeros(2,self.nucleus.peer_weights.size()[0])
         print(self.nucleus.peer_weights.size())
         combination_tensor[0,:] = self.nucleus.peer_weights.detach()
         combination_tensor[1,:] = self.stats.ema_scores
         print(torch.corrcoef(combination_tensor))
         print(torch.corrcoef(combination_tensor))
         print('Pearson Correlation matrix')
+        spearmanr = stats.spearmanr(self.nucleus.peer_weights.detach(), self.stats.ema_scores)[0]
+        print(spearmanr)
+        print(spearmanr)
         peer_weights['peer_weights/pearson'] = torch.corrcoef(combination_tensor)[0,1]
+        peer_weights['peer_weights/spearson'] = spearmanr
 
 
         # ---- wandb log if it is the end of epoch 

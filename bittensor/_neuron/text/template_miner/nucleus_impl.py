@@ -28,6 +28,25 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
+def jacobian(y, x, create_graph=False,hessian =False):                                                               
+    jac = []                                                                                          
+    flat_y = y.reshape(-1)                                                                            
+    grad_y = torch.zeros_like(flat_y)                                                                 
+    for i in range(len(flat_y)): 
+        if hessian ==True and flat_y[i].item() == 0:
+            grad_x = torch.zeros_like(x)
+            jac.append(grad_x.reshape(x.shape)) 
+            print('skipped')
+            pass
+        else:
+            print(flat_y[i].item())                                                                         
+            grad_y[i] = 1.
+            print(grad_y)                                                                             
+            grad_x, = torch.autograd.grad(flat_y, x, grad_y, retain_graph=True, create_graph=create_graph)
+            print(grad_x)
+            jac.append(grad_x.reshape(x.shape))                                                           
+            grad_y[i] = 0.                                                                                
+    return torch.stack(jac).reshape(y.shape + x.shape)       
 class PositionalEncoding(nn.Module):
 
     def __init__(self, d_model: int, dropout: float, max_len: int = 5000):
@@ -87,14 +106,11 @@ class Nucleus(nn.Module):
         """Computes salience scores for each peer in the network w.r.t the loss. 
         We use a simplified fishers information score. score_i = hessian_ii * peer_weight_i^2
         """
-        peer_weights_d1 = torch.autograd.grad(loss, self.peer_weights, create_graph=True, retain_graph=True, allow_unused=True)[0]
+        peer_weights_d1 = jacobian(loss, self.peer_weights, create_graph=True)
         if peer_weights_d1 == None: return torch.ones_like( self.peer_weights ) * (1 / self.metagraph().n.item()) # None if no grad w.r.t the chain weights.
-        peer_weights_d2 = torch.autograd.grad(peer_weights_d1.sum(), self.peer_weights, retain_graph=True, allow_unused=True )[0]
-        print(peer_weights_d2.size())
-        second_order = (peer_weights_d2.detach() * (self.peer_weights.detach()**2)/2 )
-        first_order = (peer_weights_d1.detach()*-self.peer_weights.detach())
-        for i, order in enumerate(first_order):
-            print(i,'first order', order, 'second_order',second_order[i])
+        peer_weights_d2 = jacobian(peer_weights_d1, self.peer_weights, hessian=True)
+        second_order = (peer_weights_d2.detach() * (torch.outer(-self.peer_weights.detach(),-self.peer_weights.detach()))/2 ).sum(dim=1)
+        first_order = (peer_weights_d1.detach()* -self.peer_weights.detach())
         validator_scores =  second_order + first_order
         return validator_scores
 
@@ -224,16 +240,7 @@ class Nucleus(nn.Module):
             shift_labels = inputs[..., 1:].contiguous()
             output.remote_target_loss = self.loss_fct( shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1) )
 
-        individ_loss = {}
-        with torch.no_grad():
-            for index in range(len(output.total_uids)):
-                remote_hidden_index = self.remote_hidden( output.responses[index].detach() )
-                remote_target_index = self.remote_decoder( remote_hidden_index ).detach() 
-                shift_logits_index = remote_target_index[..., :-1, :].contiguous()
-                individ_loss[output.total_uids[index]] = self.loss_fct( shift_logits_index.view(-1, shift_logits_index.size(-1)), shift_labels.view(-1) ).item()
-
-
-        return output,individ_loss
+        return output
 
     def remote(self, inputs: torch.int64 ) -> torch.float32:
         """ Forwards the inputs through the network, selects the topk peers based on self.peer_weights.
