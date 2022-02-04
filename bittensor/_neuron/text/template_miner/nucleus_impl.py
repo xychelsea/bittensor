@@ -106,12 +106,10 @@ class Nucleus(nn.Module):
         """Computes salience scores for each peer in the network w.r.t the loss. 
         We use a simplified fishers information score. score_i = hessian_ii * peer_weight_i^2
         """
-        peer_weights_d1 = jacobian(loss, self.peer_weights, create_graph=True)
+        peer_weights_d1 = torch.autograd.grad(loss, self.peer_weights, create_graph=True, retain_graph=True, allow_unused=True)[0]
         if peer_weights_d1 == None: return torch.ones_like( self.peer_weights ) * (1 / self.metagraph().n.item()) # None if no grad w.r.t the chain weights.
-        peer_weights_d2 = jacobian(peer_weights_d1, self.peer_weights, hessian=True)
-        second_order = (peer_weights_d2.detach() * (torch.outer(-self.peer_weights.detach(),-self.peer_weights.detach()))/2 ).sum(dim=1)
-        first_order = (peer_weights_d1.detach()* -self.peer_weights.detach())
-        validator_scores =  second_order + first_order
+        peer_weights_d2 = torch.autograd.grad(peer_weights_d1.sum(), self.peer_weights, retain_graph=True, allow_unused=True )[0]
+        validator_scores =  peer_weights_d2 * (self.peer_weights**2)/2  
         return validator_scores
 
     def local_forward(self, inputs: torch.LongTensor, training: bool = True) -> SimpleNamespace:
