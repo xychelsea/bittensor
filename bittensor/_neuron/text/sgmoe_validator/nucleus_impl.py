@@ -3,6 +3,7 @@ import torch
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import torch.nn.functional as F
 import math
+import torch.nn as nn
 from ..neuron_utilities import joining_context, jacobian, partial_contexts
 
 
@@ -149,7 +150,7 @@ class Validator( torch.nn.Module ):
             filtered_mean_weights = torch.mean(weights, axis = 0)
             noise = torch.normal( 0, torch.std(filtered_mean_weights).item(), size=( filtered_mean_weights.size())).to( self.config.neuron.device )
 
-            self.peer_weights = torch.zeros(self.metagraph().n.item(), device = self.device)
+            self.peer_weights = nn.Parameter(torch.zeros(self.metagraph().n.item(), device = self.device))
             self.peer_weights[active_uids] = filtered_mean_weights + noise
             
             # Get indices and values for uids with highest scores.
