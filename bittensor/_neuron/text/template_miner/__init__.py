@@ -574,7 +574,7 @@ class nucleus( torch.nn.Module ):
         # routing_weights.shape = [ batch size, __network_n__ ]
         # The gates act over the last embedding of the routing_context.
         routing_weights = self.gates( routing_context[:,-1,:] )
-        print(routing_weights.size)
+        print(routing_weights.size())
 
         # === Normalize routing_weights across batch dimension and add noise. ===
         # We are summing across the batch dimension to create a per-batch score per endpoint.
