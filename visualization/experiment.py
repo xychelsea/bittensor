@@ -115,7 +115,8 @@ class experiment:
         config.neuron.name = 'client'
         self.config = config
         self.client = neuron(config)
-        self.results = pd.DataFrame(columns = ['uid', 'batch_size', 'sequence_len', 'code', 'time'])
+        self.results_header = pd.DataFrame(columns = ['uid', 'batch_size', 'sequence_len', 'code', 'time'])
+        self.output_path = os.path.expanduser('~/.bittensor/bittensor/visualization/results.csv')
 
     def run(self):
         print('exp running')
@@ -127,11 +128,9 @@ class experiment:
             result = pd.DataFrame({'uid': range(2000), 'code': codes.detach(), 'time': times.detach()})
             result['batch_size'] = self.config.dataset.batch_size
             result['sequence_len'] = sequence_len
-            self.results = pd.concat([self.results, result])
-        
-        
-        self.results.to_csv('/home/isabella/.bittensor/bittensor/visualization/results.csv', index = False)
-        return self.results
+            result = pd.concat([self.results_header, result])
+            result.to_csv(self.output_path, mode = 'a', header = not os.path.exists(self.output_path), index = False)
+        # return self.results
 
 
 if __name__ == "__main__":
