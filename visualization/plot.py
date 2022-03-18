@@ -7,12 +7,15 @@ import numpy as np
 from plotly.subplots import make_subplots
 import pandas as pd
 import plotly.graph_objects as go
+import os
 
 app = Dash(__name__)
 
 buffer = io.StringIO()
 
-result = pd.read_csv('/home/isabella/.bittensor/bittensor/visualization/exp_results/results.csv')
+result_path = os.path.expanduser('~/.bittensor/bittensor/visualization/exp_results/')
+
+result = pd.read_csv(os.path.join(result_path, 'results.csv'))
 setup = result.drop(['uid', 'code', 'time', 'block'], axis = 1).drop_duplicates()
 print(setup)
 
@@ -36,7 +39,7 @@ app.layout = html.Div(children=[
 @app.callback(Output("dummy-respond-time-line", "figure"), Input("respond-time-filter", "value"))
 def dummy_respond_time_line(sequence_lens):
     fig = make_subplots(rows=1, cols=2)
-    result = pd.read_json('/home/isabella/.bittensor/bittensor/visualization/exp_results/mock_result.txt')
+    result = pd.read_json(os.path.join(result_path, 'mock_result.txt'))
     result = result.transpose()
     result = result.sort_values(by =['time'])
     result = result.reset_index(drop = True)
@@ -48,7 +51,7 @@ def dummy_respond_time_line(sequence_lens):
 
 @app.callback(Output("dummy-respond-time-hist", "figure"), Input("respond-time-filter", "value"))
 def dummy_respond_time_hist(sequence_lens):
-    result = pd.read_json('/home/isabella/.bittensor/bittensor/visualization/exp_results/mock_result.txt')
+    result = pd.read_json(os.path.join(result_path, 'mock_result.txt'))
     result = result.transpose()
     result = result.astype({'code': 'str'})
     fig = px.histogram(result, x="code", title="Respond code")
@@ -57,19 +60,20 @@ def dummy_respond_time_hist(sequence_lens):
 
 @app.callback(Output("dummy-respond-time-heatmap", "figure"), Input("respond-time-filter", "value"))
 def dummy_respond_time_heatmap(sequence_lens):
-    result = pd.read_json('/home/isabella/.bittensor/bittensor/visualization/exp_results/mock_result.txt')
+    result = pd.read_json(os.path.join(result_path, 'mock_result.txt'))
     result = result.transpose()
     times = result['time'].to_numpy()
     times = times.reshape((40,50))
     times = pd.DataFrame(times)
-    fig = px.imshow(times, color_continuous_scale='RdBu', title="Respond time")
+    times = 12- times
+    fig = px.imshow(times, color_continuous_scale='Greens', title="Respond time")
     
-    fig.update_layout( width = 1500, height = 1000)
+    fig.update_layout( width = 4000, height = 4000)
     return fig
 
 @app.callback(Output("dummy-respond-time-cat", "figure"), Input("respond-time-filter", "value"))
 def dummy_respond_time_heatmap(sequence_lens):
-    result = pd.read_csv('/home/isabella/.bittensor/bittensor/visualization/exp_results/results.csv')
+    result = pd.read_csv(os.path.join(result_path, 'result.csv'))
     result = result[result['batch_size'] == 3]
 
     result = result.sort_values(by =['batch_size', 'sequence_len', 'time'])
@@ -91,3 +95,4 @@ def dummy_respond_time_heatmap(sequence_lens):
 
 if __name__ == '__main__':
     app.run_server(host = '143.198.236.213', debug=True)
+    # app.run_server( debug=True)
