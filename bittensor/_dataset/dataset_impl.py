@@ -490,7 +490,7 @@ class GenesisTextDataset( Dataset ):
                         total_dataset_len += len(text_list)
 
                     i += 1
-                    
+                    print(total_dataset_len / min_data_len, total_dataset_len , min_data_len)
                     if (total_dataset_len > min_data_len) or self.IPFS_fails > self.IPFS_fails_max:
                         break
 
@@ -562,6 +562,7 @@ class GenesisTextDataset( Dataset ):
             self.data_queue.queue.get()
 
         # empty the dataset_iterator with the old sizing
+        del self.__infinite_dataset_iterator
         self.__infinite_dataset_iterator = iter([])
 
         logger.success(f"Updated data size: batch_size: {old_batch_size} --> {self.batch_size}, block_size: {old_block_size} --> {self.block_size}")
