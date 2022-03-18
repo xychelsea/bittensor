@@ -115,15 +115,22 @@ class experiment:
         config.neuron.name = 'client'
         self.config = config
         self.client = neuron(config)
-        self.results = pd.DataFrame(columns = ['uid', 'batch_size', 'sequence_len', 'codes', 'time'])
+        self.results = pd.DataFrame(columns = ['uid', 'batch_size', 'sequence_len', 'code', 'time'])
 
     def run(self):
-        representations, codes, times = self.client.forward() 
-        result = pd.DataFrame({'uid': range(2000), 'codes': codes.detach(), 'time': times.detach()})
-        result.batch_size = self.config.dataset.batch_size
-        result.sequence_len = self.config.dataset.block_size
+        print('exp running')
 
-        self.results = pd.concat([self.results, result])
+        for sequence_len in range(10, 550, 100):
+            self.client.dataset.set_data_size(batch_size = 10, block_size = sequence_len)
+            representations, codes, times = self.client.forward() 
+            print('client.forward finished')
+            result = pd.DataFrame({'uid': range(2000), 'code': codes.detach(), 'time': times.detach()})
+            result['batch_size'] = self.config.dataset.batch_size
+            result['sequence_len'] = sequence_len
+            self.results = pd.concat([self.results, result])
+        
+        
+        self.results.to_csv('/home/isabella/.bittensor/bittensor/visualization/results.csv', index = False)
         return self.results
 
 
