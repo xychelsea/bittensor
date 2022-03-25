@@ -41,7 +41,7 @@ def serve(
     ):
     config.to_defaults()
     model= model.to(model.device)
-
+    model.load(config.neuron.full_path)
     # Create Subtensor connection
     subtensor = bittensor.subtensor(config = config) if subtensor == None else subtensor
 
