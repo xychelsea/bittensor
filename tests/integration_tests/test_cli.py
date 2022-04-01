@@ -71,7 +71,7 @@ class TestCli(unittest.TestCase):
 
     @staticmethod
     def generate_wallet(coldkey : 'Keypair' = None, hotkey: 'Keypair' = None):
-        wallet = bittensor.wallet()   
+        wallet = bittensor.wallet(_mock=True)   
 
         if not coldkey:
             coldkey = Keypair.create_from_mnemonic(Keypair.generate_mnemonic())
@@ -81,7 +81,7 @@ class TestCli(unittest.TestCase):
         wallet.set_coldkey(coldkey, encrypt=False, overwrite=True)
         wallet.set_coldkeypub(coldkey, encrypt=False, overwrite=True)    
         wallet.set_hotkey(hotkey, encrypt=False, overwrite=True)
-
+        
         return wallet
 
     def test_check_configs(self):

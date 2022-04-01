@@ -126,9 +126,13 @@ def serve(
                     torch inputs to be forward processed.
                 request_type ( bittensor.proto.RequestType, `required`):
                     the request type ('FORWARD' or 'BACKWARD').
-        """        
-        uid = metagraph.hotkeys.index(pubkey)
-        priority = metagraph.S[uid].item()/ sys.getsizeof(inputs_x)
+        """
+        try:        
+            uid = metagraph.hotkeys.index(pubkey)
+            priority = metagraph.S[uid].item()/ sys.getsizeof(inputs_x)
+        
+        except:
+            return 0
 
         return priority
 
@@ -147,9 +151,8 @@ def serve(
             is_registered = pubkey in metagraph.hotkeys
             if not is_registered:
                 if config.neuron.blacklist_allow_non_registered:
-                    return False
-                else:
                     return True
+                    
 
             # Check stake.
             uid = metagraph.hotkeys.index(pubkey)
@@ -189,6 +192,7 @@ def serve(
     if axon == None: 
         # Create our axon server
         axon = bittensor.axon (
+            config = config,
             wallet = wallet,
             forward_text = forward_text,
             backward_text = backward_text,
@@ -232,6 +236,13 @@ def serve(
         axon.start().serve(subtensor = subtensor)
         
         while True:
+            
+            # --- Check registration and optionally re-register
+            nn = subtensor.neuron_for_pubkey(wallet.hotkey.ss58_address)
+            if not wallet.is_registered( subtensor = subtensor ):
+                wallet.register( subtensor = subtensor )
+                nn = subtensor.neuron_for_pubkey(wallet.hotkey.ss58_address)
+
             # --- Run 
             current_block = subtensor.get_current_block()
             end_block = current_block + config.neuron.blocks_per_epoch
