@@ -58,7 +58,7 @@ def serve(
             subtensor = subtensor
         )
     
-    metagraph.load().sync().save()
+    metagraph.sync()
 
     # Create our optimizer.
     optimizer = torch.optim.SGD(
@@ -105,14 +105,11 @@ def serve(
         if not is_registered:
             if config.neuron.blacklist_allow_non_registered:
                 return False
-            
+            print('True')
             return True
-
+        print('False')
         return False
 
-        
-
-  
 
     # Create our axon server and subscribe it to the network.
     if axon == None:
@@ -169,6 +166,9 @@ def serve(
 
         if current_block - last_set_block > config.neuron.blocks_per_set_weights:
             try: 
+                # Sync Metagraph
+                metagraph.sync()
+
                 last_set_block = current_block
                 # Set self weights to maintain activity.
                 chain_weights = torch.zeros(metagraph.n)
