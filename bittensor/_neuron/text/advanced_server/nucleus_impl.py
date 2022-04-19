@@ -76,7 +76,7 @@ class server(torch.nn.Module):
 
 
         #additional encoder 
-        self.encoder_layers = TransformerEncoderLayer( bittensor.__network_dim__, config.nucleus.nhead, config.nucleus.nhid, config.nucleus.dropout, batch_first=True)
+        self.encoder_layers = TransformerEncoderLayer( bittensor.__network_dim__, 2, 200 , 0.2, batch_first=True)
         self.encoder = TransformerEncoder( self.encoder_layers, 1 )
 
 
