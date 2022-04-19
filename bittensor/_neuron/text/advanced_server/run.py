@@ -90,6 +90,7 @@ def serve(
                 outputs (:obj:`torch.FloatTensor`):
                     The nucleus's outputs as a torch tensor of shape [batch_size, sequence_len, __network_dim__]
         """ 
+        gp_server.eval()
         return gp_server.encode_forward( inputs_x.to(gp_server.device) )
 
     # Define our backward function.
@@ -104,6 +105,7 @@ def serve(
                     torch grads of forward output.
                     
         """
+        gp_server.train()
         # -- normalized grads -- 
         grads_dy = grads_dy/(grads_dy.sum() + 0.00001)
         

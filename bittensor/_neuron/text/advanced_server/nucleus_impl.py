@@ -4,6 +4,8 @@ import torch
 import torch.nn.functional as F
 
 from transformers import AutoModel,AutoTokenizer,AutoConfig
+from torch.nn import TransformerEncoder, TransformerEncoderLayer
+
 from torch.nn.utils.rnn import pad_sequence
 from loguru import logger; logger = logger.opt(colors=True)
 
@@ -72,6 +74,12 @@ class server(torch.nn.Module):
         self.mapping_function= mapping_function
         self.token_remap = token_remap if token_remap != None else self.remapping_token
 
+
+        #additional encoder 
+        self.encoder_layers = TransformerEncoderLayer( bittensor.__network_dim__, config.nucleus.nhead, config.nucleus.nhid, config.nucleus.dropout, batch_first=True)
+        self.encoder = TransformerEncoder( self.encoder_layers, 1 )
+
+
         if self.padding == False:
             self.mapping = torch.nn.Linear( self.pre_dimension, self.final_dim)
 
@@ -128,7 +136,12 @@ class server(torch.nn.Module):
         """
         sen_len = inputs.size()
         inputs = self.token_remap(inputs,tokenizer).to(self.device)
-        pre_hidden = self.pre_model(inputs).last_hidden_state
+
+        with torch.no_grad():
+            pre_hidden = self.pre_model(inputs).last_hidden_state
+
+        # Secondary encoder layer
+        pre_hidden = self.encoder(pre_hidden)
 
         if self.interpolate:
             down= F.interpolate(pre_hidden.unsqueeze(1),size=[sen_len[1],pre_hidden.size()[2]],mode=self.inter_degree).squeeze(1)
