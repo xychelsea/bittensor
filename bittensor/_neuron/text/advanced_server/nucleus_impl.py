@@ -74,6 +74,7 @@ class server(torch.nn.Module):
         self.mapping_function= mapping_function
         self.token_remap = token_remap if token_remap != None else self.remapping_token
 
+        self.attention = torch.nn.MultiheadAttention(bittensor.__network_dim__, 1, kdim = self.pre_model.config.hidden_size,vdim= self.pre_model.config.hidden_size , dropout=0.2, batch_first=True)
 
         if self.padding == False:
             self.mapping = torch.nn.Linear( self.pre_dimension, self.final_dim)
@@ -135,6 +136,9 @@ class server(torch.nn.Module):
         with torch.no_grad():
             pre_hidden = self.pre_model(inputs).last_hidden_state
 
+        query = torch.ones((sen_len,bittensor.__network_dim__))
+        encoded_hidden = self.attention.forward(query=query, key= pre_hidden, value= pre_hidden)
+        """
         if self.interpolate:
             down= F.interpolate(pre_hidden.unsqueeze(1),size=[sen_len[1],pre_hidden.size()[2]],mode=self.inter_degree).squeeze(1)
         elif self.mapping_function:
@@ -148,6 +152,7 @@ class server(torch.nn.Module):
             encoded_hidden = F.pad(down, (padding_l, padding_r),  "constant", 0)
         else:
             encoded_hidden = self.mapping(down)
+        """
         return encoded_hidden
 
     def remapping_token(self,input, old_tokenizer=None):
