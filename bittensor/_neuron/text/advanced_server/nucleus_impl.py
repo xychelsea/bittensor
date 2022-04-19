@@ -137,7 +137,8 @@ class server(torch.nn.Module):
             pre_hidden = self.pre_model(inputs).last_hidden_state
 
         query = torch.ones((sen_len[0],sen_len[1],bittensor.__network_dim__))
-        encoded_hidden = self.attention.forward(query=query, key= pre_hidden, value= pre_hidden)
+        encoded_hidden = self.attention.forward(query=query, key= pre_hidden.item(), value= pre_hidden.item())
+        print(encoded_hidden.size())
         """
         if self.interpolate:
             down= F.interpolate(pre_hidden.unsqueeze(1),size=[sen_len[1],pre_hidden.size()[2]],mode=self.inter_degree).squeeze(1)
