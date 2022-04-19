@@ -75,11 +75,6 @@ class server(torch.nn.Module):
         self.token_remap = token_remap if token_remap != None else self.remapping_token
 
 
-        #additional encoder 
-        self.encoder_layers = TransformerEncoderLayer( bittensor.__network_dim__, 2, 200 , 0.2, batch_first=True)
-        self.encoder = TransformerEncoder( self.encoder_layers, 1 )
-
-
         if self.padding == False:
             self.mapping = torch.nn.Linear( self.pre_dimension, self.final_dim)
 
@@ -139,9 +134,6 @@ class server(torch.nn.Module):
 
         with torch.no_grad():
             pre_hidden = self.pre_model(inputs).last_hidden_state
-
-        # Secondary encoder layer
-        pre_hidden = self.encoder(pre_hidden)
 
         if self.interpolate:
             down= F.interpolate(pre_hidden.unsqueeze(1),size=[sen_len[1],pre_hidden.size()[2]],mode=self.inter_degree).squeeze(1)
