@@ -136,7 +136,7 @@ class server(torch.nn.Module):
         with torch.no_grad():
             pre_hidden = self.pre_model(inputs).last_hidden_state
 
-        query = torch.ones((sen_len,bittensor.__network_dim__))
+        query = torch.ones((sen_len[0],sen_len[1],bittensor.__network_dim__))
         encoded_hidden = self.attention.forward(query=query, key= pre_hidden, value= pre_hidden)
         """
         if self.interpolate:
