@@ -351,6 +351,16 @@ class neuron:
                 
                 # === Get another round of forward requests ===
                 self.forward_thread_queue.resume()
+                
+                df = pd.DataFrame( torch.nn.functional.normalize(next(self.nucleus.gates.parameters()), dim = 0).detach().sum(dim = 1) ).T
+                df['block'] = self.subtensor.block
+                if not os.path.exists (self.result_path + 'gate_score.csv'):
+                    df.to_csv(self.result_path + 'gate_score.csv')
+                else:
+                    df.to_csv(self.result_path + 'gate_score.csv', mode = 'a', header = False)
+
+                print('updated gate score csv')
+                
 
         # Iterate epochs.
         self.epoch += 1
