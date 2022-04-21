@@ -614,7 +614,7 @@ class nucleus( torch.nn.Module ):
 
         target_uids = torch.tensor([42,34,26,386,1702,1697,1706,1701,1703,1705,1704,1707,1708])
         random_uids = torch.tensor(list(range(12)))
-        interested_uids = torch.concat([])
+        interested_uids = torch.concat([target_uids, random_uids])
         routing_uids = interested_uids[routing_index]
         # === Get endpoint information for the highest scoring uids ===
         # We index into the metagraph's endpoints and return a list of the filtered set of endpoints we wish to query.
