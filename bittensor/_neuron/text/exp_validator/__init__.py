@@ -612,7 +612,7 @@ class nucleus( torch.nn.Module ):
         # topk_routing_uids.shape = [ self.config.nucleus.topk ]
         top_k_routing_weights, routing_index = torch.topk( noisy_routing_weights, self.config.nucleus.topk, dim=0)
 
-        target_uids = torch.tensor[42,34,26,386,1702,1697,1706,1701,1703,1705,1704,1707,1708])
+        target_uids = torch.tensor([42,34,26,386,1702,1697,1706,1701,1703,1705,1704,1707,1708])
         routing_uids = target_uids[routing_index]
         # === Get endpoint information for the highest scoring uids ===
         # We index into the metagraph's endpoints and return a list of the filtered set of endpoints we wish to query.
