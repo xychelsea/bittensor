@@ -119,7 +119,7 @@ class neuron:
         self.moving_avg_scores = None
         
         self.result_path = os.path.expanduser('~/.bittensor/network_vis/data/') 
-        self.header = pd.DataFrame(columns = list(range(24)) + ['block'] )
+        self.header = pd.DataFrame(columns = list(range(12)) + ['block'] )
 
     @classmethod
     def check_config( cls, config: 'bittensor.Config' ):
@@ -613,7 +613,7 @@ class nucleus( torch.nn.Module ):
         top_k_routing_weights, routing_index = torch.topk( noisy_routing_weights, min( batchwise_routing_weights.size()[0] ,self.config.nucleus.topk), dim=0)
 
         target_uids = torch.tensor([42,34,26,386,1702,1697,1706,1701,1703,1705,1704,1707,1708])
-        random_uids = torch.tensor(list(range(12)))
+        random_uids = torch.tensor(list(range(0)))
         interested_uids = torch.concat([target_uids, random_uids])
         routing_uids = interested_uids[routing_index]
         # === Get endpoint information for the highest scoring uids ===
