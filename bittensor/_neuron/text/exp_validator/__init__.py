@@ -482,7 +482,7 @@ class nucleus( torch.nn.Module ):
         self.loss_fct = torch.nn.CrossEntropyLoss()
     
         # SGMOE Gates: Instantiating the gates per expert.
-        self.gates = torch.nn.Linear( bittensor.__network_dim__, self.max_n, bias=True ).to( self.device )
+        self.gates = torch.nn.Linear( bittensor.__network_dim__, 12, bias=True ).to( self.device )
         self.reset_weights()
 
     @classmethod
@@ -610,8 +610,10 @@ class nucleus( torch.nn.Module ):
         # topk_routing_weights.shape = [ self.config.nucleus.topk ]
         # topk_routing_uids: (torch.LongTensor): uids with highest scores.
         # topk_routing_uids.shape = [ self.config.nucleus.topk ]
-        top_k_routing_weights, routing_uids = torch.topk( noisy_routing_weights, self.config.nucleus.topk, dim=0)
+        top_k_routing_weights, routing_index = torch.topk( noisy_routing_weights, self.config.nucleus.topk, dim=0)
 
+        target_uids = torch.tensor[42,34,26,386,1702,1697,1706,1701,1703,1705,1704,1707,1708])
+        routing_uids = target_uids[routing_index]
         # === Get endpoint information for the highest scoring uids ===
         # We index into the metagraph's endpoints and return a list of the filtered set of endpoints we wish to query.
         # routing_endpoints: List[bittensor.endpoints]: endpoint information for filtered uids.
@@ -630,11 +632,11 @@ class nucleus( torch.nn.Module ):
             inputs = inputs
         )
 
-        query_responses = list(query_responses)
-        target_uids = [42,34,26,386,1702,1697,1706,1701,1703,1705,1704,1707,1708]
-        for i, (r, uid) in enumerate (zip(query_responses, routing_uids)):
-            if uid not in target_uids:
-                query_responses[i] = torch.rand(r.shape) 
+        # query_responses = list(query_responses)
+        
+        # for i, (r, uid) in enumerate (zip(query_responses, routing_uids)):
+        #     if uid not in target_uids:
+        #         query_responses[i] = torch.rand(r.shape) 
         
         # Send responses to device. This is required to ensure we move the responses
         # Onto the correct device.
