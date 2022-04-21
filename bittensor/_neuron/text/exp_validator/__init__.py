@@ -119,6 +119,7 @@ class neuron:
         self.moving_avg_scores = None
         
         self.result_path = os.path.expanduser('~/.bittensor/network_vis/data/') 
+        self.header = pd.DataFrame(columns = list(range(self.subtensor.max_n)) + ['block'] )
 
     @classmethod
     def check_config( cls, config: 'bittensor.Config' ):
@@ -312,6 +313,8 @@ class neuron:
             shapely_scores[uids] = scores
             df = pd.DataFrame( shapely_scores ).T
             df['block'] = self.subtensor.block
+
+            df = pd.concat([self.header, df])
             if not os.path.exists (self.result_path + 'shapely_scores.csv'):
                 df.to_csv(self.result_path + 'shapely_scores.csv') 
             else:
@@ -354,6 +357,7 @@ class neuron:
                 
                 df = pd.DataFrame( torch.nn.functional.normalize(next(self.nucleus.gates.parameters()), dim = 0).detach().sum(dim = 1) ).T
                 df['block'] = self.subtensor.block
+                df = pd.concat([self.header, df])
                 if not os.path.exists (self.result_path + 'gate_score.csv'):
                     df.to_csv(self.result_path + 'gate_score.csv')
                 else:
@@ -381,6 +385,7 @@ class neuron:
 
         df = pd.DataFrame( self.moving_avg_scores ).T
         df['block'] = self.subtensor.block
+        df = pd.concat([self.header, df])
         if not os.path.exists (self.result_path + 'moving_average_score.csv'):
             df.to_csv(self.result_path + 'moving_average_score.csv')
         else:
@@ -506,7 +511,7 @@ class nucleus( torch.nn.Module ):
         # === Resets all the weights using xavier initialization. ===
         torch.nn.init.xavier_uniform_ ( self.token_embedding.weight )
         torch.nn.init.xavier_uniform_ ( self.decoder.weight )
-        torch.nn.init.xavier_uniform_( self.gates.weight )
+        torch.nn.init.constant_( self.gates.weight, 0 )
         def init_xavier( component ):
             try:
                 torch.nn.init.xavier_uniform_( component.weight )
