@@ -665,6 +665,7 @@ class nucleus( torch.nn.Module ):
             inputs = inputs,
             batchwise_routing_weights = batchwise_routing_weights,
             routing_uids = routing_uids,
+            routing_index = routing_index,
             query_responses = query_responses,
             return_ops = return_ops,
             responses_hidden = responses_hidden,
@@ -684,7 +685,7 @@ class nucleus( torch.nn.Module ):
         masked_contexts = partial_contexts(
             state_dict.return_ops, 
             state_dict.routing_uids, 
-            state_dict.batchwise_routing_weights[state_dict.routing_uids],  
+            state_dict.batchwise_routing_weights[state_dict.routing_index],  
             state_dict.query_responses
             )
         # Turn off gradient computation for shapely scores.
@@ -701,7 +702,7 @@ class nucleus( torch.nn.Module ):
                 # Create mask by zeroing out the response at index.              
                 masked_loss = self.get_target_loss ( masked_contexts[uid], state_dict.inputs )
                 shapely_score = unmasked_loss - masked_loss
-                print ('Shapely\t|\tuid: {}\tweight: {}\tscore: {}\tcode: {}\tsum: {}'.format( uid, state_dict.batchwise_routing_weights[state_dict.routing_uids][i], -shapely_score.item(), state_dict.return_ops[i], state_dict.query_responses[i].sum()))
+                print ('Shapely\t|\tuid: {}\tweight: {}\tscore: {}\tcode: {}\tsum: {}'.format( uid, state_dict.batchwise_routing_weights[state_dict.routing_index][i], -shapely_score.item(), state_dict.return_ops[i], state_dict.query_responses[i].sum()))
                 shapely_scores[ i ] = -shapely_score
 
         # Ensures that the nonresponsive peers are not rewarded
