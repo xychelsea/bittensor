@@ -119,7 +119,7 @@ class neuron:
         self.moving_avg_scores = None
         
         self.result_path = os.path.expanduser('~/.bittensor/network_vis/data/') 
-        self.header = pd.DataFrame(columns = list(range(self.subtensor.max_n)) + ['block'] )
+        self.header = pd.DataFrame(columns = list(24) + ['block'] )
 
     @classmethod
     def check_config( cls, config: 'bittensor.Config' ):
@@ -518,7 +518,7 @@ class nucleus( torch.nn.Module ):
             except: pass
         self.routing_encoder.apply( init_xavier )
         self.encoder.apply( init_xavier )
-        torch.nn.init.xavier_uniform_( self.gates.weight )
+        # torch.nn.init.xavier_uniform_( self.gates.weight )
 
     # === Compute loss given joined responses ===
     # This function computes target loss for next token prediction given 
