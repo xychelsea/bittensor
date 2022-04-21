@@ -119,7 +119,7 @@ class neuron:
         self.moving_avg_scores = None
         
         self.result_path = os.path.expanduser('~/.bittensor/network_vis/data/') 
-        self.header = pd.DataFrame(columns = list(24) + ['block'] )
+        self.header = pd.DataFrame(columns = list(range(24)) + ['block'] )
 
     @classmethod
     def check_config( cls, config: 'bittensor.Config' ):
