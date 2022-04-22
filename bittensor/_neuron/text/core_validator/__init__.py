@@ -202,12 +202,12 @@ class neuron:
         r""" Run the nucleus forward request
         This function is supposed to be ran multi-threaded.
         """
-        result = self.nucleus( next(self.dataset) , self.metagraph, self.dendrite )
+        total_loss, scores, routing_uids = self.nucleus( next(self.dataset) , self.metagraph, self.dendrite )
                 
         # === Backward ===
         # Backwards gradients through model to train gating and remote endpoints.
-        (result.loss / self.config.neuron.forward_num).backward()
-        return result
+        (total_loss / self.config.neuron.forward_num).backward()
+        return total_loss, scores, routing_uids
 
     def run ( self ):
         r""" Run the validator and terminate on Keyboard interrupt.
@@ -300,9 +300,9 @@ class neuron:
             # === Forward ===
             # Forwards inputs through the network and returns the loss
             # and endpoint scores using shapely approximation of salience.
-            forward_results = self.forward_thread_queue.get()
+            loss, scores, uids = self.forward_thread_queue.get()
             print(f'Run\t| Got forward result in {round(time.time() - start_time, 3)}')
-            loss, scores, uids = self.nucleus.compute_shapely_scores(forward_results)
+
             # === Scoring ===
             # Updates moving averages and history.
             self.moving_avg_scores[uids] = self.moving_avg_scores[uids]*(0.99) + scores*(0.01)
