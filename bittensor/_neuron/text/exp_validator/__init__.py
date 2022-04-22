@@ -313,7 +313,7 @@ class neuron:
             df.columns = list(uids)
             df['block'] = self.subtensor.block
 
-            df = df.concat([self.header, df])
+            df = pd.concat([self.header, df])
             if not os.path.exists (self.result_path + 'shapely_scores.csv'):
                 df.to_csv(self.result_path + 'shapely_scores.csv') 
             else:
