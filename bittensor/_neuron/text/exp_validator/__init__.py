@@ -489,9 +489,9 @@ class nucleus( torch.nn.Module ):
         self.target_uids = torch.tensor([26,34,42,386,1697,1701,1702,1703,1704,1705,1706,1707,1708])
         self.random_uids = torch.tensor(list(range(24)))
         if self.config.nucleus.include_random == True:
-            self.interested_uids = torch.concat([target_uids, random_uids])
+            self.interested_uids = torch.concat([self.target_uids, self.random_uids])
         else:
-            self.interested_uids = target_uids
+            self.interested_uids = self.target_uids
 
     @classmethod
     def add_args( cls, parser ):
