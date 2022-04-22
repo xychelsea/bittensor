@@ -377,7 +377,7 @@ class neuron:
             # Updates moving averages and history.
             self.moving_avg_scores[uids] = self.moving_avg_scores[uids]*(0.99) + scores*(0.01)
             with open("scores.txt", "a") as scores:
-                scores.write( "{} - ".format(self.subtensor.block) + list( zip( self.moving_avg_scores.tolist(), self.metagraph.uids.tolist() ) ) + "\n")
+                scores.write( "{} - ".format(self.subtensor.block) + str(list( zip( self.moving_avg_scores.tolist(), self.metagraph.uids.tolist() ) )) + "\n")
 
         
             # === State update ===
