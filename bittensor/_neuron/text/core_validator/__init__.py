@@ -670,7 +670,7 @@ class nucleus( torch.nn.Module ):
 
         scores = torch.zeros( routing_uids.size())
         for i, response in enumerate(query_responses):
-            response = response / response.sum()
+            response = response / (response.sum() + 0.001)
             decoded_targets = self.decoder( response * batchwise_routing_weights[ routing_uids[i] ] )
             shift_logits = decoded_targets[..., :-1, :].contiguous()
             shift_labels = inputs[..., 1:].contiguous()
