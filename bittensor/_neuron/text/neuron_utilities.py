@@ -120,7 +120,7 @@ def joining_context(return_ops, topk_weights, responses):
         output += responses[joining_uids[index]]* joining_weight
     return output, joining_uids
 
-def partial_contexts(return_ops, topk_uids, topk_weights, responses):
+def partial_contexts(return_ops, topk_uids, topk_weights, responses, leave_one_in=False):
     """
     Creates the partial contexts which are used to calculate the shapley scores 
 
@@ -143,14 +143,19 @@ def partial_contexts(return_ops, topk_uids, topk_weights, responses):
     with torch.no_grad():
         for i, uid in enumerate(topk_uids):
             partial_return_ops = return_ops.clone()
-            # --- Only mask peers that successfully
-            if partial_return_ops[i] != bittensor.proto.ReturnCode.Success:
-                pass
+            if leave_one_in == False:
+                # --- Only mask peers that successfully
+                if partial_return_ops[i] != bittensor.proto.ReturnCode.Success:
+                    pass
+                else:
+                    partial_return_ops[i] = bittensor.proto.ReturnCode.NoReturn
             else:
-                partial_return_ops[i] = bittensor.proto.ReturnCode.NoReturn
+                partial_return_ops[:] = bittensor.proto.ReturnCode.NoReturn
+                partial_return_ops[i] = bittensor.proto.ReturnCode.Success
+
             partial_context[uid.item()], _ = joining_context(partial_return_ops, topk_weights, responses)
     return partial_context
-    
+
 class ThreadQueue(threading.Thread):
     r""" This producer thread runs in backgraound to fill the queue with the result of the target function.
     """

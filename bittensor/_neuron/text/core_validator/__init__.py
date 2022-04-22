@@ -636,7 +636,8 @@ class nucleus( torch.nn.Module ):
             state_dict.return_ops, 
             state_dict.routing_uids, 
             state_dict.batchwise_routing_weights[state_dict.routing_uids],  
-            state_dict.query_responses
+            state_dict.query_responses,
+            leave_one_in=True
             )
         # Turn off gradient computation for shapely scores.
         # shapely_scores.shape = [ nucleus.topk ]
@@ -649,8 +650,14 @@ class nucleus( torch.nn.Module ):
             unmasked_loss = self.get_target_loss(state_dict.responses_hidden, state_dict.inputs)
             # Iterate over all responses creating a masked context.
             for i, uid in enumerate(masked_contexts):
-                # Create mask by zeroing out the response at index.              
-                masked_loss = self.get_target_loss ( masked_contexts[uid], state_dict.inputs )
+                if uid > 2000:
+                    random_input = torch.rand(masked_contexts[uid].size())
+                    masked_loss = self.get_target_loss ( random_input, state_dict.inputs )
+
+                else:
+                    # Create mask by zeroing out the response at index.              
+                    masked_loss = self.get_target_loss ( masked_contexts[uid], state_dict.inputs )
+
                 shapely_score = unmasked_loss - masked_loss
                 print ('Shapely\t|\tuid: {}\tweight: {}\tscore: {}\tcode: {}\tsum: {}'.format( uid, state_dict.batchwise_routing_weights[state_dict.routing_uids][i], -shapely_score.item(), state_dict.return_ops[i], state_dict.query_responses[i].sum()))
                 shapely_scores[ i ] = -shapely_score
