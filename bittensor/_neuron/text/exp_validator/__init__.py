@@ -310,7 +310,7 @@ class neuron:
             loss, scores, uids = self.nucleus.compute_shapely_scores(forward_results)
 
             df = pd.DataFrame( scores ).T
-            df.columns = uids
+            df.columns = list(uids)
             df['block'] = self.subtensor.block
 
             df = df.concat([self.header, df])
@@ -355,7 +355,7 @@ class neuron:
                 self.forward_thread_queue.resume()
                 
                 df = pd.DataFrame( torch.nn.functional.normalize(next(self.nucleus.gates.parameters()), dim = 0).detach().sum(dim = 1) ).T
-                df.columns = self.nucleus.interested_uids
+                df.columns = list(self.nucleus.interested_uids)
                 df['block'] = self.subtensor.block
                 df = pd.concat([self.header, df])
                 if not os.path.exists (self.result_path + 'gate_score.csv'):
@@ -384,7 +384,7 @@ class neuron:
         # )
 
         df = pd.DataFrame( self.moving_avg_scores[self.nucleus.interested_uids] ).T
-        df.columns = self.nucleus.interested_uids
+        df.columns = list(self.nucleus.interested_uids)
         df['block'] = self.subtensor.block
         df = pd.concat([self.header, df])
         if not os.path.exists (self.result_path + 'moving_average_score.csv'):
