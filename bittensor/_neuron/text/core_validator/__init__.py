@@ -35,7 +35,7 @@ import traceback
 from rich import print
 from rich.console import Console
 from rich.traceback import install
-from ..neuron_utilities import joining_context, partial_contexts, ThreadQueue
+from ..neuron_utilities import joining_context, partial_contexts, leave_one_in_partial_contexts, ThreadQueue
 import torch.nn as nn
 import random
 from torch.nn.utils import clip_grad_norm_
@@ -594,69 +594,16 @@ class nucleus( torch.nn.Module ):
         for response in query_responses:
             response.to( self.device )
 
-        # === Compute global loss ===
-        # Computes the global training loss for the nucleus by decoding all the responses
-        # onto the targets.
-        # target_loss: (torch.float64): loss after decoding all responses and a variance loss.
-        # target_loss.shape = [ 1 ]
-        responses_hidden, _ = joining_context( return_ops, batchwise_routing_weights[routing_uids], query_responses) 
-        target_loss = self.get_target_loss ( responses_hidden, inputs )
-        print ('Loss\t|\t{}'.format( target_loss.item() ))
+        scores = torch.zeros( routing_uids.size())
+        for i, response in enumerate(query_responses):
+            decoded_targets = self.decoder( response * batchwise_routing_weights[ routing_uids[i] ] )
+            shift_logits = decoded_targets[..., :-1, :].contiguous()
+            shift_labels = inputs[..., 1:].contiguous()
+            loss_i = self.loss_fct( shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1) )
+            scores[ i ] = -loss_i
+            print ('Loss\t|\t{}'.format( loss_i.item() ))
 
-        # === Compute Importance loss ===
-        # Computes the importance loss based on the stardard error of batchwise_routing_weights
-        # This ensures that gates do not converge onto a few experts
-        # importance_loss: (torch.float64) the importance loss based on the stardard error
-        # target_loss: (torch.float64): the total loss (global training loss + importance loss)
-        # target_loss.shape = [ 1 ]
-        importance_loss = self.config.nucleus.importance  * (torch.std(batchwise_routing_weights)/torch.mean(batchwise_routing_weights))**2
-        loss = target_loss + importance_loss
-        
-        state_dict = SimpleNamespace(
-            inputs = inputs,
-            batchwise_routing_weights = batchwise_routing_weights,
-            routing_uids = routing_uids,
-            query_responses = query_responses,
-            return_ops = return_ops,
-            responses_hidden = responses_hidden,
-            loss = loss,
-            n = metagraph.n.item()
-        )
-        
-        return state_dict
+        total_loss = scores.sum()
 
-    def compute_shapely_scores(self, state_dict):
-        
-        # === Compute shapely scores ===
-        # Computes shapely scores for each endpoint by masking the response and
-        # computing the change in loss induced.
-        # shapely_scores: (torch.float32): shapely scores per query_response
-        # shapely_scores.shape = [ metagraph.n ]
-        masked_contexts = partial_contexts(
-            state_dict.return_ops, 
-            state_dict.routing_uids, 
-            state_dict.batchwise_routing_weights[state_dict.routing_uids],  
-            state_dict.query_responses
-            )
-        # Turn off gradient computation for shapely scores.
-        # shapely_scores.shape = [ nucleus.topk ]
-        # This sets non queried peers as if non-responsive
-        shapely_scores = torch.zeros( state_dict.routing_uids.size())
-        # Turn off gradient computation for shapely scores.
-        with torch.no_grad():
-            self.eval()
-
-            unmasked_loss = self.get_target_loss(state_dict.responses_hidden, state_dict.inputs)
-            # Iterate over all responses creating a masked context.
-            for i, uid in enumerate(masked_contexts):
-                # Create mask by zeroing out the response at index.              
-                masked_loss = self.get_target_loss ( masked_contexts[uid], state_dict.inputs )
-                shapely_score = unmasked_loss - masked_loss
-                print ('Shapely\t|\tuid: {}\tweight: {}\tscore: {}\tcode: {}\tsum: {}'.format( uid, state_dict.batchwise_routing_weights[state_dict.routing_uids][i], -shapely_score.item(), state_dict.return_ops[i], state_dict.query_responses[i].sum()))
-                shapely_scores[ i ] = -shapely_score
-
-        # Ensures that the nonresponsive peers are not rewarded
-        shapely_scores[state_dict.return_ops != 1 ]  = -1
-        
         # === Done ===
-        return state_dict.loss, shapely_scores, state_dict.routing_uids
+        return total_loss, scores, routing_uids

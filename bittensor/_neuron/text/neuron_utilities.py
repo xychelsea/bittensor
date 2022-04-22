@@ -144,11 +144,62 @@ def partial_contexts(return_ops, topk_uids, topk_weights, responses):
         for i, uid in enumerate(topk_uids):
             partial_return_ops = return_ops.clone()
             # --- Only mask peers that successfully
-            if partial_return_ops[i] != bittensor.proto.ReturnCode.Success:
-                pass
-            else:
-                partial_return_ops[i] = bittensor.proto.ReturnCode.NoReturn
+            partial_return_ops[i] = bittensor.proto.ReturnCode
             partial_context[uid.item()], _ = joining_context(partial_return_ops, topk_weights, responses)
+    return partial_context
+
+
+def leave_one_in_joining_context(return_ops, topk_weights, responses):
+    """
+    Joins response embbedings depending on the return codes 
+        Args:
+            return_ops  (:type:`pytorch.LongTensor`, `required`), shape = [n]:
+                The return codes of dendrite call return ops.
+            topk_weights  (:type:`pytorch.FloatTensor`, `required`), shape = [n]:
+                The topk weights selected for joining
+            responses  (:type:`pytorch.FloatTensor`, `required`), shape = [n]:
+                The embeddings that sent by the peers
+
+        Returns:
+            output (:type:`pytorch.FloatTensor``, `required), shape = [n]:
+                The joinned output embedding using the weights
+            joining_uids  (:type:`pytorch.LongTensor`, `required`), shape = [n]:
+                The uids used to create output
+    
+    """
+    joining_uids= torch.where( return_ops == -1 )[0]
+    joining_weights = F.softmax( topk_weights[(return_ops == -1)], dim = 0 ) 
+    output = torch.zeros( (responses[0].shape[0], responses[0].shape[1], bittensor.__network_dim__))
+    for index, joining_weight in enumerate( joining_weights ):
+        output += responses[joining_uids[index]]* joining_weight
+    return output, joining_uids
+
+def leave_one_in_partial_contexts(return_ops, topk_uids, topk_weights, responses):
+    """
+    Creates the partial contexts which leaves only one in during shapely calc. 
+
+        Args:
+            return_ops  (:type:`pytorch.LongTensor`, `required`), shape = [n]:
+                The return codes of dendrite call return ops.
+            topk_uids (:type:`pytorch.LongTensor`, `required`), shape = [n]:
+                The topk uids selected for joining                
+            topk_weights  (:type:`pytorch.FloatTensor`, `required`), shape = [n]:
+                The topk weights selected for joining
+            responses  (:type:`pytorch.FloatTensor`, `required`), shape = [n]:
+                The embeddings that sent by the peers
+
+        Returns:
+            partial_context (:type:`Dictionary``, `required):
+                A dict containing all of joinned contexts with a single peer masked out 
+    
+    """
+    partial_context = {}
+    with torch.no_grad():
+        for i, uid in enumerate(topk_uids):
+            partial_return_ops = return_ops.clone()
+            # --- Only mask peers that successfully
+            partial_return_ops[i] = -1
+            partial_context[uid.item()], _ = leave_one_in_joining_context(partial_return_ops, topk_weights, responses)
     return partial_context
     
 class ThreadQueue(threading.Thread):
