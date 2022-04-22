@@ -670,13 +670,13 @@ class nucleus( torch.nn.Module ):
 
         scores = torch.zeros( routing_uids.size())
         for i, response in enumerate(query_responses):
-            response = response / (response.sum() + 0.000001)
+            norm_response = response / (response.sum() + 0.000001)
             decoded_targets = self.decoder( response * batchwise_routing_weights[ routing_uids[i] ] )
             shift_logits = decoded_targets[..., :-1, :].contiguous()
             shift_labels = inputs[..., 1:].contiguous()
             loss_i = self.loss_fct( shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1) )
             scores[ i ] = loss_i
-            print ('Loss:\t{}  \tuid:\t{}   is rand:{}'.format( loss_i.item(), routing_uids[i], routing_uids[i] in _known_random))
+            print ('Loss:\t{}  \tuid:\t{}   wieght:{}  rand: {} mean: {} std: {}'.format( loss_i.item(), routing_uids[i], batchwise_routing_weights[ routing_uids[i] ], routing_uids[i] in _known_random, response.mean(), response.std()))
 
         total_loss = scores.sum()
 
