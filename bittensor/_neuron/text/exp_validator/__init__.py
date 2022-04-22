@@ -483,7 +483,12 @@ class nucleus( torch.nn.Module ):
         self.loss_fct = torch.nn.CrossEntropyLoss()
     
         # SGMOE Gates: Instantiating the gates per expert.
-        self.gates = torch.nn.Linear( bittensor.__network_dim__, 12, bias=True ).to( self.device )
+
+
+        if self.config.nucleus.include_random == True:
+            self.gates = torch.nn.Linear( bittensor.__network_dim__, 37, bias=True ).to( self.device )
+        else:
+            self.gates = torch.nn.Linear( bittensor.__network_dim__, 13, bias=True ).to( self.device )
         self.reset_weights()
         
         self.target_uids = torch.tensor([26,34,42,386,1697,1701,1702,1703,1704,1705,1706,1707,1708])
