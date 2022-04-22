@@ -118,8 +118,8 @@ class neuron:
         self.loss_agg_mutex = Lock()
         self.moving_avg_scores = None
         
-        self.result_path = os.path.expanduser('~/.bittensor/network_vis/data/') 
-        self.header = pd.DataFrame(columns = list(range(12)) + ['block'] )
+        self.result_path = os.path.expanduser('~/.bittensor/network_vis/data/')
+        self.header = pd.DataFrame(columns = list(self.nucleus.interested_uids) + ['block']) 
 
     @classmethod
     def check_config( cls, config: 'bittensor.Config' ):
@@ -309,12 +309,11 @@ class neuron:
             print(f'Run\t| Got forward result in {round(time.time() - start_time, 3)}')
             loss, scores, uids = self.nucleus.compute_shapely_scores(forward_results)
 
-            shapely_scores = torch.zeros_like( self.metagraph.S )
-            shapely_scores[uids] = scores
-            df = pd.DataFrame( shapely_scores ).T
+            df = pd.DataFrame( scores ).T
+            df.columns = uids
             df['block'] = self.subtensor.block
 
-            df = pd.concat([self.header, df])
+            df = df.concat([self.header, df])
             if not os.path.exists (self.result_path + 'shapely_scores.csv'):
                 df.to_csv(self.result_path + 'shapely_scores.csv') 
             else:
@@ -356,6 +355,7 @@ class neuron:
                 self.forward_thread_queue.resume()
                 
                 df = pd.DataFrame( torch.nn.functional.normalize(next(self.nucleus.gates.parameters()), dim = 0).detach().sum(dim = 1) ).T
+                df.columns = self.nucleus.interested_uids
                 df['block'] = self.subtensor.block
                 df = pd.concat([self.header, df])
                 if not os.path.exists (self.result_path + 'gate_score.csv'):
@@ -383,7 +383,8 @@ class neuron:
         #     wait_for_finalization = self.config.neuron.wait_for_finalization,
         # )
 
-        df = pd.DataFrame( self.moving_avg_scores ).T
+        df = pd.DataFrame( self.moving_avg_scores[self.nucleus.interested_uids] ).T
+        df.columns = self.nucleus.interested_uids
         df['block'] = self.subtensor.block
         df = pd.concat([self.header, df])
         if not os.path.exists (self.result_path + 'moving_average_score.csv'):
@@ -484,6 +485,13 @@ class nucleus( torch.nn.Module ):
         # SGMOE Gates: Instantiating the gates per expert.
         self.gates = torch.nn.Linear( bittensor.__network_dim__, 12, bias=True ).to( self.device )
         self.reset_weights()
+        
+        self.target_uids = torch.tensor([26,34,42,386,1697,1701,1702,1703,1704,1705,1706,1707,1708])
+        self.random_uids = torch.tensor(list(range(24)))
+        if self.config.nucleus.include_random == True:
+            self.interested_uids = torch.concat([target_uids, random_uids])
+        else:
+            self.interested_uids = target_uids
 
     @classmethod
     def add_args( cls, parser ):
@@ -494,6 +502,7 @@ class nucleus( torch.nn.Module ):
         parser.add_argument('--nucleus.dropout', type=float, help='the dropout value', default=0.2)
         parser.add_argument('--nucleus.importance', type=float, help='hyperparameter for the importance loss', default=3)
         parser.add_argument('--nucleus.noise_multiplier', type=float, help='Standard deviation multipler on weights', default=2 )
+        parser.add_argument('--nucleus.include_random', action='store_true', help='', default=False )
 
     @classmethod
     def config ( cls ):
@@ -612,11 +621,7 @@ class nucleus( torch.nn.Module ):
         # topk_routing_uids.shape = [ self.config.nucleus.topk ]
         top_k_routing_weights, routing_index = torch.topk( noisy_routing_weights, min( batchwise_routing_weights.size()[0] ,self.config.nucleus.topk), dim=0)
 
-        target_uids = torch.tensor([42,34,26,386,1702,1697,1706,1701,1703,1705,1704,1707,1708])
-        # random_uids = torch.tensor(list(range(0)))
-        # interested_uids = torch.concat([target_uids, random_uids])
-        interested_uids = target_uids
-        routing_uids = interested_uids[routing_index]
+        routing_uids = self.interested_uids[routing_index]
         # === Get endpoint information for the highest scoring uids ===
         # We index into the metagraph's endpoints and return a list of the filtered set of endpoints we wish to query.
         # routing_endpoints: List[bittensor.endpoints]: endpoint information for filtered uids.
@@ -638,7 +643,7 @@ class nucleus( torch.nn.Module ):
         query_responses = list(query_responses)
         
         for i, (r, uid) in enumerate (zip(query_responses, routing_uids)):
-            if uid not in target_uids:
+            if uid not in self.target_uids:
                 query_responses[i] = torch.rand(r.shape) 
         
         # Send responses to device. This is required to ensure we move the responses
