@@ -119,7 +119,7 @@ class neuron:
         self.moving_avg_scores = None
         
         self.result_path = os.path.expanduser('~/.bittensor/network_vis/data/')
-        self.header = pd.DataFrame(columns = list(self.nucleus.interested_uids) + ['block']) 
+        self.header = pd.DataFrame(columns = self.nucleus.interested_uids.tolist() + ['block']) 
 
     @classmethod
     def check_config( cls, config: 'bittensor.Config' ):
@@ -310,7 +310,7 @@ class neuron:
             loss, scores, uids = self.nucleus.compute_shapely_scores(forward_results)
 
             df = pd.DataFrame( scores ).T
-            df.columns = list(uids)
+            df.columns = uids.tolist()
             df['block'] = self.subtensor.block
 
             df = pd.concat([self.header, df])
@@ -318,6 +318,7 @@ class neuron:
                 df.to_csv(self.result_path + 'shapely_scores.csv') 
             else:
                 df.to_csv(self.result_path + 'shapely_scores.csv', mode = 'a', header = False) 
+            print(df)
             print('updated shapely score csv')
 
             # === Scoring ===
@@ -355,7 +356,7 @@ class neuron:
                 self.forward_thread_queue.resume()
                 
                 df = pd.DataFrame( torch.nn.functional.normalize(next(self.nucleus.gates.parameters()), dim = 0).detach().sum(dim = 1) ).T
-                df.columns = list(self.nucleus.interested_uids)
+                df.columns = self.nucleus.interested_uids.tolist()
                 df['block'] = self.subtensor.block
                 df = pd.concat([self.header, df])
                 if not os.path.exists (self.result_path + 'gate_score.csv'):
@@ -384,7 +385,7 @@ class neuron:
         # )
 
         df = pd.DataFrame( self.moving_avg_scores[self.nucleus.interested_uids] ).T
-        df.columns = list(self.nucleus.interested_uids)
+        df.columns = self.nucleus.interested_uids.tolist()
         df['block'] = self.subtensor.block
         df = pd.concat([self.header, df])
         if not os.path.exists (self.result_path + 'moving_average_score.csv'):
