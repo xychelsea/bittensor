@@ -307,8 +307,19 @@ class neuron:
             # and endpoint scores using shapely approximation of salience.
             forward_results = self.forward_thread_queue.get()
             print(f'Run\t| Got forward result in {round(time.time() - start_time, 3)}')
-            loss, scores, uids = self.nucleus.compute_shapely_scores(forward_results)
+            loss, scores, uids, batchwise_routing_weights = self.nucleus.compute_shapely_scores(forward_results)
 
+
+            df = pd.DataFrame( batchwise_routing_weights.detach() ).T
+            df.columns = self.interested_uids.tolist()
+            df['block'] = self.subtensor.block
+            df = pd.concat([self.header, df])
+            if not os.path.exists (self.result_path + 'routing_weight.csv'):
+                df.to_csv(self.result_path + 'routing_weight.csv')
+            else:
+                df.to_csv(self.result_path + 'routing_weight.csv', mode = 'a', header = False)
+            print('updated routing weight csv')
+            
             df = pd.DataFrame( scores ).T
             df.columns = uids.tolist()
             df['block'] = self.subtensor.block
@@ -384,6 +395,7 @@ class neuron:
         #     wait_for_finalization = self.config.neuron.wait_for_finalization,
         # )
 
+        
         df = pd.DataFrame( self.moving_avg_scores[self.nucleus.interested_uids] ).T
         df.columns = self.nucleus.interested_uids.tolist()
         df['block'] = self.subtensor.block
@@ -675,17 +687,7 @@ class nucleus( torch.nn.Module ):
         importance_loss = self.config.nucleus.importance  * (torch.std(batchwise_routing_weights)/torch.mean(batchwise_routing_weights))**2
         loss = target_loss + importance_loss
         
-         
-        df = pd.DataFrame( batchwise_routing_weights.detach() ).T
-        df.columns = self.interested_uids.tolist()
-        df['block'] = self.subtensor.block
-        df = pd.concat([self.header, df])
-        if not os.path.exists (self.result_path + 'routing_weight.csv'):
-            df.to_csv(self.result_path + 'routing_weight.csv')
-        else:
-            df.to_csv(self.result_path + 'routing_weight.csv', mode = 'a', header = False)
-        print('updated routing weight csv')
-        
+          
         state_dict = SimpleNamespace(
             inputs = inputs,
             batchwise_routing_weights = batchwise_routing_weights,
@@ -734,4 +736,4 @@ class nucleus( torch.nn.Module ):
         shapely_scores[state_dict.return_ops != 1 ]  = -1
         
         # === Done ===
-        return state_dict.loss, shapely_scores, state_dict.routing_uids
+        return state_dict.loss, shapely_scores, state_dict.routing_uids, state_dict.batchwise_routing_weight
