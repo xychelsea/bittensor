@@ -676,7 +676,7 @@ class nucleus( torch.nn.Module ):
         loss = target_loss + importance_loss
         
          
-        df = pd.DataFrame( batchwise_routing_weights ).T
+        df = pd.DataFrame( batchwise_routing_weights.detach() ).T
         df.columns = self.interested_uids.tolist()
         df['block'] = self.subtensor.block
         df = pd.concat([self.header, df])
