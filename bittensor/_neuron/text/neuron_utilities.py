@@ -113,11 +113,37 @@ def joining_context(return_ops, topk_weights, responses):
                 The uids used to create output
     
     """
-    joining_uids= torch.where( return_ops == bittensor.proto.ReturnCode.Success )[0]
+    joining_uids = torch.where( return_ops == bittensor.proto.ReturnCode.Success )[0]
     joining_weights = F.softmax( topk_weights[(return_ops == bittensor.proto.ReturnCode.Success)], dim = 0 ) 
     output = torch.zeros( (responses[0].shape[0], responses[0].shape[1], bittensor.__network_dim__))
     for index, joining_weight in enumerate( joining_weights ):
         output += responses[joining_uids[index]]* joining_weight
+    return output, joining_uids
+
+def joining_logits(return_ops, topk_weights, logits):
+    """
+    Joins response embbedings depending on the return codes 
+        Args:
+            return_ops  (:type:`pytorch.LongTensor`, `required`), shape = [n]:
+                The return codes of dendrite call return ops.
+            topk_weights  (:type:`pytorch.FloatTensor`, `required`), shape = [n]:
+                The topk weights selected for joining
+            responses  (:type:`pytorch.FloatTensor`, `required`), shape = [n]:
+                The embeddings that sent by the peers
+
+        Returns:
+            output (:type:`pytorch.FloatTensor``, `required), shape = [n]:
+                The joinned output embedding using the weights
+            joining_uids  (:type:`pytorch.LongTensor`, `required`), shape = [n]:
+                The uids used to create output
+    
+    """
+    joining_uids = torch.where( return_ops == bittensor.proto.ReturnCode.Success )[0]
+    joining_weights = F.softmax( topk_weights[(return_ops == bittensor.proto.ReturnCode.Success)], dim = 0 ) 
+    output = torch.zeros( (logits[0].shape[0], logits[0].shape[1]))
+    for index, joining_weight in enumerate( joining_weights ):
+        output += logits[joining_uids[index]]* joining_weight
+    
     return output, joining_uids
 
 def partial_contexts(return_ops, topk_uids, topk_weights, responses):

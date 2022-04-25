@@ -35,7 +35,7 @@ import traceback
 from rich import print
 from rich.console import Console
 from rich.traceback import install
-from ..neuron_utilities import joining_context, partial_contexts, ThreadQueue
+from ..neuron_utilities import joining_context, joining_logits, partial_contexts, ThreadQueue
 import torch.nn as nn
 import random
 from torch.nn.utils import clip_grad_norm_
@@ -521,6 +521,7 @@ class nucleus( torch.nn.Module ):
         parser.add_argument('--nucleus.importance', type=float, help='hyperparameter for the importance loss', default=3)
         parser.add_argument('--nucleus.noise_multiplier', type=float, help='Standard deviation multipler on weights', default=2 )
         parser.add_argument('--nucleus.include_random', action='store_true', help='', default=False )
+        parser.add_argument('--nucleus.join_logits', action='store_true', help='', default=False )
 
     @classmethod
     def config ( cls ):
@@ -547,6 +548,17 @@ class nucleus( torch.nn.Module ):
         self.encoder.apply( init_xavier )
         # torch.nn.init.xavier_uniform_( self.gates.weight )
 
+    def get_logits (self, hidden):
+        # hidden: (torch.float64): [ batch_size, sequence_len, __network_dim__ ]
+        #   Hidden units which are encoded and decoded onto targets for loss computation.
+        # targets: (torch.float64): [n]
+        #   Token targets,
+        src_mask = torch.triu(torch.ones(hidden.size(1), hidden.size(1)) * float('-inf'), diagonal=1)
+        src_mask = src_mask.to(self.config.neuron.device)
+        encoded_hidden = self.encoder( hidden, mask = src_mask )
+        decoded_targets = self.decoder( encoded_hidden )
+        shift_logits = decoded_targets[..., :-1, :].contiguous()
+        return shift_logits
     # === Compute loss given joined responses ===
     # This function computes target loss for next token prediction given 
     # the joined responses as a hidden unit input.
@@ -557,14 +569,18 @@ class nucleus( torch.nn.Module ):
         #   Hidden units which are encoded and decoded onto targets for loss computation.
         # targets: (torch.float64): [n]
         #   Token targets,
-        src_mask = torch.triu(torch.ones(hidden.size(1), hidden.size(1)) * float('-inf'), diagonal=1)
-        src_mask = src_mask.to(self.config.neuron.device)
-        encoded_hidden = self.encoder( hidden, mask = src_mask )
-        decoded_targets = self.decoder( encoded_hidden )
-        shift_logits = decoded_targets[..., :-1, :].contiguous()
+        shift_logits = self.get_logits(hidden)
         shift_labels = targets[..., 1:].contiguous()
         return self.loss_fct( shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1) )
-
+    
+    def get_target_loss_from_logit ( self, shift_logits, targets ):
+        # hidden: (torch.float64): [ batch_size, sequence_len, __network_dim__ ]
+        #   Hidden units which are encoded and decoded onto targets for loss computation.
+        # targets: (torch.float64): [n]
+        #   Token targets,
+        shift_labels = targets[..., 1:].contiguous()
+        return self.loss_fct( shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1) ) 
+    
     def forward ( 
         self, 
         inputs: torch.FloatTensor,
@@ -674,8 +690,21 @@ class nucleus( torch.nn.Module ):
         # onto the targets.
         # target_loss: (torch.float64): loss after decoding all responses and a variance loss.
         # target_loss.shape = [ 1 ]
-        responses_hidden, _ = joining_context( return_ops, batchwise_routing_weights[routing_index], query_responses) 
-        target_loss = self.get_target_loss ( responses_hidden, inputs )
+        if self.config.nucleus.join_logit == False:
+            responses_hidden, _ = joining_context( return_ops, batchwise_routing_weights[routing_index], query_responses)  
+            target_loss = self.get_target_loss ( responses_hidden, inputs )
+
+        else:
+            logits = []
+            for ops, r in zip(return_ops.tolist(), query_responses):
+                if ops == bittensor.proto.ReturnCode.Success:
+                    logits.add(self.get_logits(r))
+                else:
+                    logits.add(None)
+            
+            joint_logits = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
+            target_loss = self.get_target_loss_from_logit(joint_logits, inputs) 
+            
         print ('Loss\t|\t{}'.format( target_loss.item() ))
 
         # === Compute Importance loss ===
