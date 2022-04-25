@@ -140,9 +140,12 @@ def joining_logits(return_ops, topk_weights, logits):
     """
     joining_uids = torch.where( return_ops == bittensor.proto.ReturnCode.Success )[0]
     joining_weights = F.softmax( topk_weights[(return_ops == bittensor.proto.ReturnCode.Success)], dim = 0 ) 
-    output = torch.zeros( (logits[0].shape[0], logits[0].shape[1]))
+    output = None
     for index, joining_weight in enumerate( joining_weights ):
-        output += logits[joining_uids[index]]* joining_weight
+        if output == None:
+            output = logits[joining_uids[index]] * joining_weight
+        else:
+            output += logits[joining_uids[index]] * joining_weight
     
     return output, joining_uids
 
@@ -174,7 +177,7 @@ def partial_contexts(return_ops, topk_uids, topk_weights, responses):
                 pass
             else:
                 partial_return_ops = torch.zeros_like(return_ops)
-                partial_return_ops[i] = bittensor.proto.ReturnCode.NoReturn
+                partial_return_ops[i] = bittensor.proto.ReturnCode.Success
             
             partial_context[uid.item()], _ = joining_context(partial_return_ops, topk_weights, responses)
     return partial_context
