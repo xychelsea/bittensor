@@ -690,7 +690,7 @@ class nucleus( torch.nn.Module ):
         # onto the targets.
         # target_loss: (torch.float64): loss after decoding all responses and a variance loss.
         # target_loss.shape = [ 1 ]
-        if self.config.nucleus.join_logit == False:
+        if self.config.nucleus.join_logits == False:
             responses_hidden, _ = joining_context( return_ops, batchwise_routing_weights[routing_index], query_responses)  
             target_loss = self.get_target_loss ( responses_hidden, inputs )
 
