@@ -698,9 +698,9 @@ class nucleus( torch.nn.Module ):
             logits = []
             for ops, r in zip(return_ops.tolist(), query_responses):
                 if ops == bittensor.proto.ReturnCode.Success:
-                    logits.add(self.get_logits(r))
+                    logits.append(self.get_logits(r))
                 else:
-                    logits.add(None)
+                    logits.append(None)
             
             joint_logits = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
             target_loss = self.get_target_loss_from_logit(joint_logits, inputs) 
