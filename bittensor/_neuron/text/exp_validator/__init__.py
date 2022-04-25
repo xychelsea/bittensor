@@ -685,7 +685,7 @@ class nucleus( torch.nn.Module ):
         # target_loss: (torch.float64): the total loss (global training loss + importance loss)
         # target_loss.shape = [ 1 ]
         importance_loss = self.config.nucleus.importance  * (torch.std(batchwise_routing_weights)/torch.mean(batchwise_routing_weights))**2
-        loss = target_loss + importance_loss
+        loss = target_loss #  + importance_loss
         
           
         state_dict = SimpleNamespace(
@@ -736,4 +736,4 @@ class nucleus( torch.nn.Module ):
         shapely_scores[state_dict.return_ops != 1 ]  = -1
         
         # === Done ===
-        return state_dict.loss, shapely_scores, state_dict.routing_uids, state_dict.batchwise_routing_weight
+        return state_dict.loss, shapely_scores, state_dict.routing_uids, state_dict.batchwise_routing_weights
