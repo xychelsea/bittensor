@@ -675,6 +675,17 @@ class nucleus( torch.nn.Module ):
         importance_loss = self.config.nucleus.importance  * (torch.std(batchwise_routing_weights)/torch.mean(batchwise_routing_weights))**2
         loss = target_loss + importance_loss
         
+         
+        df = pd.DataFrame( batchwise_routing_weights ).T
+        df.columns = self.interested_uids.tolist()
+        df['block'] = self.subtensor.block
+        df = pd.concat([self.header, df])
+        if not os.path.exists (self.result_path + 'routing_weight.csv'):
+            df.to_csv(self.result_path + 'routing_weight.csv')
+        else:
+            df.to_csv(self.result_path + 'routing_weight.csv', mode = 'a', header = False)
+        print('updated routing weight csv')
+        
         state_dict = SimpleNamespace(
             inputs = inputs,
             batchwise_routing_weights = batchwise_routing_weights,
