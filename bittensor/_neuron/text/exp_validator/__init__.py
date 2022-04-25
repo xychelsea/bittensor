@@ -311,7 +311,7 @@ class neuron:
 
 
             df = pd.DataFrame( batchwise_routing_weights.detach() ).T
-            df.columns = self.interested_uids.tolist()
+            df.columns = self.nucleus.interested_uids.tolist()
             df['block'] = self.subtensor.block
             df = pd.concat([self.header, df])
             if not os.path.exists (self.result_path + 'routing_weight.csv'):
