@@ -675,9 +675,10 @@ class nucleus( torch.nn.Module ):
         )
 
         query_responses = list(query_responses)
-        
+        return_ops = list(return_ops)
         for i, (r, uid) in enumerate (zip(query_responses, routing_uids)):
             if uid not in self.target_uids:
+                return_ops[i] = bittensor.proto.ReturnCode.Success
                 query_responses[i] = torch.rand(r.shape) 
         
         # Send responses to device. This is required to ensure we move the responses
@@ -738,12 +739,12 @@ class nucleus( torch.nn.Module ):
         # computing the change in loss induced.
         # shapely_scores: (torch.float32): shapely scores per query_response
         # shapely_scores.shape = [ metagraph.n ]
-        masked_contexts = partial_contexts(
-            state_dict.return_ops, 
-            state_dict.routing_uids, 
-            state_dict.batchwise_routing_weights[state_dict.routing_index],  
-            state_dict.query_responses
-            )
+        # masked_contexts = partial_contexts(
+        #     state_dict.return_ops, 
+        #     state_dict.routing_uids, 
+        #     state_dict.batchwise_routing_weights[state_dict.routing_index],  
+        #     state_dict.query_responses
+        #     )
         # Turn off gradient computation for shapely scores.
         # shapely_scores.shape = [ nucleus.topk ]
         # This sets non queried peers as if non-responsive
@@ -754,9 +755,9 @@ class nucleus( torch.nn.Module ):
 
             unmasked_loss = self.get_target_loss(state_dict.responses_hidden, state_dict.inputs)
             # Iterate over all responses creating a masked context.
-            for i, uid in enumerate(masked_contexts):
+            for i, uid in enumerate(state_dict.routing_uids):
                 # Create mask by zeroing out the response at index.              
-                masked_loss = self.get_target_loss ( masked_contexts[uid], state_dict.inputs )
+                masked_loss = self.get_target_loss ( state_dict.query_responses[i], state_dict.inputs )
                 shapely_score = unmasked_loss - masked_loss
                 print ('Shapely\t|\tuid: {}\tweight: {}\tscore: {}\tcode: {}\tsum: {}'.format( uid, state_dict.batchwise_routing_weights[state_dict.routing_index][i], -shapely_score.item(), state_dict.return_ops[i], state_dict.query_responses[i].sum()))
                 shapely_scores[ i ] = -shapely_score
