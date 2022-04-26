@@ -679,7 +679,10 @@ class nucleus( torch.nn.Module ):
         for i, (r, uid) in enumerate (zip(query_responses, routing_uids)):
             if uid not in self.target_uids:
                 return_ops[i] = bittensor.proto.ReturnCode.Success
-                query_responses[i] = torch.rand(r.shape) 
+                query_responses[i] = torch.rand(r.shape)
+
+
+        return_ops = torch.tensor(return_ops)
         
         # Send responses to device. This is required to ensure we move the responses
         # Onto the correct device.
