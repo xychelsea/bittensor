@@ -703,7 +703,7 @@ class nucleus( torch.nn.Module ):
                 else:
                     logits.append(None)
             
-            joint_logits = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
+            joint_logits, uids = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
             target_loss = self.get_target_loss_from_logit(joint_logits, inputs) 
             
         print ('Loss\t|\t{}'.format( target_loss.item() ))
