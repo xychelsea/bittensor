@@ -119,8 +119,13 @@ class neuron:
         self.moving_avg_scores = None
         
         self.result_path = os.path.expanduser('~/.bittensor/network_vis/data/')
-        self.header = pd.DataFrame(columns = self.nucleus.interested_uids.tolist() + ['block']) 
+        self.header = pd.DataFrame(columns = self.nucleus.interested_uids.tolist() + ['block'])
 
+        if not os.path.isdir(os.path.expanduser('~/.bittensor/network_vis/')):
+            os.mkdir(os.path.expanduser('~/.bittensor/network_vis/'))
+
+        if not os.path.isdir(self.result_dir):
+            os.mkdir(self.result_dir)
     @classmethod
     def check_config( cls, config: 'bittensor.Config' ):
         r""" Checks/validates the config namespace object.
