@@ -124,8 +124,8 @@ class neuron:
         if not os.path.isdir(os.path.expanduser('~/.bittensor/network_vis/')):
             os.mkdir(os.path.expanduser('~/.bittensor/network_vis/'))
 
-        if not os.path.isdir(self.result_dir):
-            os.mkdir(self.result_dir)
+        if not os.path.isdir(self.result_path):
+            os.mkdir(self.result_path)
     @classmethod
     def check_config( cls, config: 'bittensor.Config' ):
         r""" Checks/validates the config namespace object.
