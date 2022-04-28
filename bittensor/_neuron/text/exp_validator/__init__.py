@@ -585,7 +585,7 @@ class nucleus( torch.nn.Module ):
         #   Token targets,
         shift_labels = targets[..., 1:].contiguous()
         if shift_logits == None:
-            shift_logits = torch.ones_like(shift_labels, requires_grad=True)
+            shift_logits = torch.zeros_like(shift_labels, requires_grad=True)
         return self.loss_fct( shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1) ) 
     
     def forward ( 
