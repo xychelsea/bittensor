@@ -586,7 +586,9 @@ class nucleus( torch.nn.Module ):
         shift_labels = targets[..., 1:].contiguous()
         if shift_logits == None:
             shift_logits = torch.zeros_like(shift_labels).float()
-        return self.loss_fct( shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1) ) 
+            return self.loss_fct( shift_logits.view(-1), shift_labels.view(-1) ) 
+        else:
+            return self.loss_fct( shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1) ) 
     
     def forward ( 
         self, 
