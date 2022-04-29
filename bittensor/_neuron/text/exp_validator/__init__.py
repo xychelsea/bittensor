@@ -668,7 +668,7 @@ class nucleus( torch.nn.Module ):
         # topk_routing_uids: (torch.LongTensor): uids with highest scores.
         # topk_routing_uids.shape = [ self.config.nucleus.topk ]
         
-        top_k_routing_weights, routing_index = torch.topk( noisy_routing_weights, self.config.nucleus.topk, dim=0)
+        top_k_routing_weights, routing_index = torch.topk( noisy_routing_weights, min(len(noisy_routing_weights), self.config.nucleus.topk), dim=0)
         routing_uids = self.interested_uids[routing_index]
         # === Get endpoint information for the highest scoring uids ===
         # We index into the metagraph's endpoints and return a list of the filtered set of endpoints we wish to query.
@@ -779,7 +779,7 @@ class nucleus( torch.nn.Module ):
                 if self.config.nucleus.join_logits == True:
                     context = state_dict.query_responses[i]
                 else:
-                    context = masked_contexts[uid]
+                    context = masked_contexts[uid.item()]
                 masked_loss = self.get_target_loss ( context, state_dict.inputs )
                 shapely_score = unmasked_loss - masked_loss
                 print ('Shapely\t|\tuid: {}\tweight: {}\tscore: {}\tcode: {}\tsum: {}'.format( uid, state_dict.batchwise_routing_weights[state_dict.routing_index][i], -shapely_score.item(), state_dict.return_ops[i], state_dict.query_responses[i].sum()))
