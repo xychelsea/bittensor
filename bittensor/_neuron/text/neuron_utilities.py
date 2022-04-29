@@ -176,8 +176,7 @@ def partial_contexts(return_ops, topk_uids, topk_weights, responses):
             if partial_return_ops[i] != bittensor.proto.ReturnCode.Success:
                 pass
             else:
-                partial_return_ops = torch.zeros_like(return_ops)
-                partial_return_ops[i] = bittensor.proto.ReturnCode.Success
+                partial_return_ops[i] = bittensor.proto.ReturnCode.Timeout
             
             partial_context[uid.item()], _ = joining_context(partial_return_ops, topk_weights, responses)
     return partial_context

@@ -527,6 +527,7 @@ class nucleus( torch.nn.Module ):
         parser.add_argument('--nucleus.noise_multiplier', type=float, help='Standard deviation multipler on weights', default=2 )
         parser.add_argument('--nucleus.include_random', action='store_true', help='', default=False )
         parser.add_argument('--nucleus.join_logits', action='store_true', help='', default=False )
+        parser.add_argument('--nucleus.use_topk', action='store_true', help='', default=False )
 
     @classmethod
     def config ( cls ):
@@ -652,7 +653,11 @@ class nucleus( torch.nn.Module ):
         # routing_weights.shape = [ n_filtered ]
         batchwise_routing_weights = torch.mean(routing_weights, axis = 0)[:metagraph.n]
         noisy_routing_weights = torch.normal( 0, 1, size=( batchwise_routing_weights.size())).to( self.config.neuron.device )
-        noisy_routing_weights = noisy_routing_weights * self.config.nucleus.noise_multiplier
+        
+        if self.config.nucleus.use_topk:
+            noisy_routing_weights = batchwise_routing_weights + noisy_routing_weights * self.config.nucleus.noise_multiplier
+        else:
+            noisy_routing_weights = noisy_routing_weights * self.config.nucleus.noise_multiplier
         
 
         # === Get indices and values for uids with highest scores ===
@@ -662,8 +667,8 @@ class nucleus( torch.nn.Module ):
         # topk_routing_weights.shape = [ self.config.nucleus.topk ]
         # topk_routing_uids: (torch.LongTensor): uids with highest scores.
         # topk_routing_uids.shape = [ self.config.nucleus.topk ]
-        top_k_routing_weights, routing_index = torch.topk( noisy_routing_weights, min( batchwise_routing_weights.size()[0] ,self.config.nucleus.topk), dim=0)
-
+        
+        top_k_routing_weights, routing_index = torch.topk( noisy_routing_weights, self.config.nucleus.topk, dim=0)
         routing_uids = self.interested_uids[routing_index]
         # === Get endpoint information for the highest scoring uids ===
         # We index into the metagraph's endpoints and return a list of the filtered set of endpoints we wish to query.
@@ -737,7 +742,7 @@ class nucleus( torch.nn.Module ):
             routing_index = routing_index,
             query_responses = query_responses,
             return_ops = return_ops,
-            responses_hidden = responses_hidden,
+            # responses_hidden = responses_hidden,
             loss = loss,
             n = metagraph.n.item()
         )
@@ -751,12 +756,13 @@ class nucleus( torch.nn.Module ):
         # computing the change in loss induced.
         # shapely_scores: (torch.float32): shapely scores per query_response
         # shapely_scores.shape = [ metagraph.n ]
-        # masked_contexts = partial_contexts(
-        #     state_dict.return_ops, 
-        #     state_dict.routing_uids, 
-        #     state_dict.batchwise_routing_weights[state_dict.routing_index],  
-        #     state_dict.query_responses
-        #     )
+        if self.config.nucleus.join_logits == False:
+            masked_contexts = partial_contexts(
+                state_dict.return_ops, 
+                state_dict.routing_uids, 
+                state_dict.batchwise_routing_weights[state_dict.routing_index],  
+                state_dict.query_responses
+                )
         # Turn off gradient computation for shapely scores.
         # shapely_scores.shape = [ nucleus.topk ]
         # This sets non queried peers as if non-responsive
@@ -765,11 +771,16 @@ class nucleus( torch.nn.Module ):
         with torch.no_grad():
             self.eval()
 
-            unmasked_loss = self.get_target_loss(state_dict.responses_hidden, state_dict.inputs)
+            # unmasked_loss = self.get_target_loss(state_dict.responses_hidden, state_dict.inputs)
+            unmasked_loss = state_dict.loss
             # Iterate over all responses creating a masked context.
             for i, uid in enumerate(state_dict.routing_uids):
-                # Create mask by zeroing out the response at index.              
-                masked_loss = self.get_target_loss ( state_dict.query_responses[i], state_dict.inputs )
+                # Create mask by zeroing out the response at index.  
+                if self.config.nucleus.join_logits == True:
+                    context = state_dict.query_responses[i]
+                else:
+                    context = masked_contexts[uid]
+                masked_loss = self.get_target_loss ( context, state_dict.inputs )
                 shapely_score = unmasked_loss - masked_loss
                 print ('Shapely\t|\tuid: {}\tweight: {}\tscore: {}\tcode: {}\tsum: {}'.format( uid, state_dict.batchwise_routing_weights[state_dict.routing_index][i], -shapely_score.item(), state_dict.return_ops[i], state_dict.query_responses[i].sum()))
                 shapely_scores[ i ] = -shapely_score
