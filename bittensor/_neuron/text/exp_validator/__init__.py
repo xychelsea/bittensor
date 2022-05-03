@@ -479,6 +479,10 @@ class nucleus( torch.nn.Module ):
         self.config = config
         self.device = device
         self.max_n = subtensor.max_n 
+        if self.config.nucleus.include_random == True:
+            self.num_randoms = 24
+        else:
+            self.num_randoms = 0
 
         # Token embeddings project int64 tokens onto representations.
         self.token_embedding = torch.nn.Embedding( bittensor.__vocab_size__,  bittensor.__network_dim__ )
@@ -493,6 +497,7 @@ class nucleus( torch.nn.Module ):
 
         # Decoder which projects hidden unit representations on to the token dimension.
         self.decoder = torch.nn.Linear( bittensor.__network_dim__, bittensor.__vocab_size__ , bias=False)
+        self.mix_decoder = torch.nn.Linear( bittensor.__network_dim__, bittensor.__vocab_size__ , bias=False)
 
         # Positional Encoding
         self.local_pos_encoder = PositionalEncoding( bittensor.__network_dim__, self.config.nucleus.dropout )
@@ -502,11 +507,8 @@ class nucleus( torch.nn.Module ):
     
         # SGMOE Gates: Instantiating the gates per expert.
 
-
-        if self.config.nucleus.include_random == True:
-            self.gates = torch.nn.Linear( bittensor.__network_dim__, 37, bias=True ).to( self.device )
-        else:
-            self.gates = torch.nn.Linear( bittensor.__network_dim__, 13, bias=True ).to( self.device )
+        self.gates = torch.nn.Linear( bittensor.__network_dim__, 13+self.num_randoms, bias=True ).to( self.device )
+        
         self.reset_weights()
         
         self.target_uids = torch.tensor([26,34,42,386,1697,1701,1702,1703,1704,1705,1706,1707,1708])
@@ -554,7 +556,7 @@ class nucleus( torch.nn.Module ):
         self.encoder.apply( init_xavier )
         # torch.nn.init.xavier_uniform_( self.gates.weight )
 
-    def get_logits (self, hidden):
+    def get_logits (self, hidden, mix = False):
         # hidden: (torch.float64): [ batch_size, sequence_len, __network_dim__ ]
         #   Hidden units which are encoded and decoded onto targets for loss computation.
         # targets: (torch.float64): [n]
@@ -562,7 +564,11 @@ class nucleus( torch.nn.Module ):
         src_mask = torch.triu(torch.ones(hidden.size(1), hidden.size(1)) * float('-inf'), diagonal=1)
         src_mask = src_mask.to(self.config.neuron.device)
         encoded_hidden = self.encoder( hidden, mask = src_mask )
-        decoded_targets = self.decoder( encoded_hidden )
+        if mix:
+            decoded_targets = self.mix_decoder( encoded_hidden )
+        else:
+            decoded_targets = self.decoder( encoded_hidden )
+
         shift_logits = decoded_targets[..., :-1, :].contiguous()
         return shift_logits
     # === Compute loss given joined responses ===
@@ -570,12 +576,12 @@ class nucleus( torch.nn.Module ):
     # the joined responses as a hidden unit input.
     # target_loss: (torch.float64): loss after decoding responses to targets.
     # target_loss.shape = [ 1 ]
-    def get_target_loss ( self, hidden, targets ):
+    def get_target_loss ( self, hidden, targets, mix = False):
         # hidden: (torch.float64): [ batch_size, sequence_len, __network_dim__ ]
         #   Hidden units which are encoded and decoded onto targets for loss computation.
         # targets: (torch.float64): [n]
         #   Token targets,
-        shift_logits = self.get_logits(hidden)
+        shift_logits = self.get_logits(hidden, mix = mix)
         shift_labels = targets[..., 1:].contiguous()
         return self.loss_fct( shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1) )
     
@@ -709,19 +715,17 @@ class nucleus( torch.nn.Module ):
         # target_loss: (torch.float64): loss after decoding all responses and a variance loss.
         # target_loss.shape = [ 1 ]
         responses_hidden, _ = joining_context( return_ops, batchwise_routing_weights[routing_index], query_responses)  
-        if self.config.nucleus.join_logits == False:
-            target_loss = self.get_target_loss ( responses_hidden, inputs )
+        mix_target_loss = self.get_target_loss ( responses_hidden, inputs, mix = True )
 
-        else:
-            logits = []
-            for ops, r in zip(return_ops.tolist(), query_responses):
-                if ops == bittensor.proto.ReturnCode.Success:
-                    logits.append(self.get_logits(r))
-                else:
-                    logits.append(None)
-            
-            joint_logits, uids = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
-            target_loss = self.get_target_loss_from_logit(joint_logits, inputs) 
+        logits = []
+        for ops, r in zip(return_ops.tolist(), query_responses):
+            if ops == bittensor.proto.ReturnCode.Success:
+                logits.append(self.get_logits(r, mix = False))
+            else:
+                logits.append(None)
+        
+        joint_logits, uids = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
+        target_loss = self.get_target_loss_from_logit(joint_logits, inputs) 
             
         print ('Loss\t|\t{}'.format( target_loss.item() ))
 
@@ -732,7 +736,7 @@ class nucleus( torch.nn.Module ):
         # target_loss: (torch.float64): the total loss (global training loss + importance loss)
         # target_loss.shape = [ 1 ]
         importance_loss = self.config.nucleus.importance  * (torch.std(batchwise_routing_weights)/torch.mean(batchwise_routing_weights))**2
-        loss = target_loss #  + importance_loss
+        loss = target_loss + mix_target_loss#  + importance_loss
         
           
         state_dict = SimpleNamespace(
@@ -744,6 +748,8 @@ class nucleus( torch.nn.Module ):
             return_ops = return_ops,
             # responses_hidden = responses_hidden,
             loss = loss,
+            target_loss = target_loss,
+            mix_target_loss = mix_target_loss,
             n = metagraph.n.item()
         )
         
@@ -772,18 +778,20 @@ class nucleus( torch.nn.Module ):
             self.eval()
 
             # unmasked_loss = self.get_target_loss(state_dict.responses_hidden, state_dict.inputs)
-            unmasked_loss = state_dict.loss
             # Iterate over all responses creating a masked context.
             for i, uid in enumerate(state_dict.routing_uids):
                 # Create mask by zeroing out the response at index.  
-                if self.config.nucleus.join_logits == True:
-                    context = state_dict.query_responses[i]
-                else:
-                    context = masked_contexts[uid.item()]
-                masked_loss = self.get_target_loss ( context, state_dict.inputs )
-                shapely_score = unmasked_loss - masked_loss
+                context = state_dict.query_responses[i]
+                masked_loss = self.get_target_loss ( context, state_dict.inputs, mix = False )
+                shapely_score = state_dict.target_loss - masked_loss
                 print ('Shapely\t|\tuid: {}\tweight: {}\tscore: {}\tcode: {}\tsum: {}'.format( uid, state_dict.batchwise_routing_weights[state_dict.routing_index][i], -shapely_score.item(), state_dict.return_ops[i], state_dict.query_responses[i].sum()))
-                shapely_scores[ i ] = -shapely_score
+
+                context = masked_contexts[uid.item()]
+                masked_loss = self.get_target_loss ( context, state_dict.inputs, mix = True )
+                mix_shapely_score = state_dict.mix_target_loss - masked_loss
+                print ('Mixed Shapely\t|\tuid: {}\tweight: {}\tscore: {}\tcode: {}\tsum: {}'.format( uid, state_dict.batchwise_routing_weights[state_dict.routing_index][i], -shapely_score.item(), state_dict.return_ops[i], state_dict.query_responses[i].sum()))
+                
+                shapely_scores[ i ] = (-shapely_score) + (-mix_shapely_score)
 
         # Ensures that the nonresponsive peers are not rewarded
         shapely_scores[state_dict.return_ops != 1 ]  = -1
