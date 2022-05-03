@@ -762,13 +762,12 @@ class nucleus( torch.nn.Module ):
         # computing the change in loss induced.
         # shapely_scores: (torch.float32): shapely scores per query_response
         # shapely_scores.shape = [ metagraph.n ]
-        if self.config.nucleus.join_logits == False:
-            masked_contexts = partial_contexts(
-                state_dict.return_ops, 
-                state_dict.routing_uids, 
-                state_dict.batchwise_routing_weights[state_dict.routing_index],  
-                state_dict.query_responses
-                )
+        masked_contexts = partial_contexts(
+            state_dict.return_ops, 
+            state_dict.routing_uids, 
+            state_dict.batchwise_routing_weights[state_dict.routing_index],  
+            state_dict.query_responses
+            )
         # Turn off gradient computation for shapely scores.
         # shapely_scores.shape = [ nucleus.topk ]
         # This sets non queried peers as if non-responsive
