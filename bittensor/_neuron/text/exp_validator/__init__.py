@@ -478,7 +478,8 @@ class nucleus( torch.nn.Module ):
         super(nucleus, self).__init__()
         self.config = config
         self.device = device
-        self.max_n = subtensor.max_n 
+        self.max_n = subtensor.max_n
+        self.num_sub_decoder = 50
 
         # Token embeddings project int64 tokens onto representations.
         self.token_embedding = torch.nn.Embedding( bittensor.__vocab_size__,  bittensor.__network_dim__ )
@@ -492,7 +493,9 @@ class nucleus( torch.nn.Module ):
         self.encoder = TransformerEncoder( self.encoder_layers, config.nucleus.nlayers )
 
         # Decoder which projects hidden unit representations on to the token dimension.
-        self.decoder = torch.nn.Linear( bittensor.__network_dim__, bittensor.__vocab_size__ , bias=False)
+        self.decoder_gate = torch.nn.Linear( bittensor.__network_dim__, self.num_sub_decoder , bias=False)
+        self.sub_decoder = [torch.nn.Linear( bittensor.__network_dim__, 512, bias=False ).to( self.device ) for _ in range(self.num_sub_decoder)]
+        self.decoder = torch.nn.Linear( 512, bittensor.__vocab_size__ , bias=False)
 
         # Positional Encoding
         self.local_pos_encoder = PositionalEncoding( bittensor.__network_dim__, self.config.nucleus.dropout )
@@ -562,7 +565,9 @@ class nucleus( torch.nn.Module ):
         src_mask = torch.triu(torch.ones(hidden.size(1), hidden.size(1)) * float('-inf'), diagonal=1)
         src_mask = src_mask.to(self.config.neuron.device)
         encoded_hidden = self.encoder( hidden, mask = src_mask )
-        decoded_targets = self.decoder( encoded_hidden )
+        decoder_gate_score = self.decoder_gate(encoded_hidden)
+        sub_hiddens = [score * sub_decoder(encoded_hidden) for score, sub_decoder in zip(decoder_gate_score, self.sub_decoder)]
+        decoded_targets = self.decoder( sum(sub_hiddens) )
         shift_logits = decoded_targets[..., :-1, :].contiguous()
         return shift_logits
     # === Compute loss given joined responses ===
