@@ -480,7 +480,7 @@ class nucleus( torch.nn.Module ):
         self.device = device
         self.max_n = subtensor.max_n 
         if self.config.nucleus.include_random == True:
-            self.num_randoms = 24
+            self.num_randoms = 200
         else:
             self.num_randoms = 0
 
@@ -512,7 +512,7 @@ class nucleus( torch.nn.Module ):
         self.reset_weights()
         
         self.target_uids = torch.tensor([26,34,42,386,1697,1701,1702,1703,1704,1705,1706,1707,1708])
-        self.random_uids = torch.tensor(list(range(2000, 2200)))
+        self.random_uids = torch.tensor(list(range(2000, 2000 + self.num_randoms)))
         if self.config.nucleus.include_random == True:
             self.interested_uids = torch.concat([self.target_uids, self.random_uids])
         else:
