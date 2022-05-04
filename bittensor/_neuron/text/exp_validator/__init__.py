@@ -694,6 +694,9 @@ class nucleus( torch.nn.Module ):
             inputs = inputs,
             timeout = 14
         )
+        print('forward_text finished')
+
+        
 
         query_responses = list(query_responses)
         return_ops = list(return_ops)
@@ -720,16 +723,20 @@ class nucleus( torch.nn.Module ):
             target_loss = self.get_target_loss ( responses_hidden, inputs )
 
         else:
+            print('getting logits')
             logits = []
             for ops, r in zip(return_ops.tolist(), query_responses):
+                print('getting logits', len(logits))
                 if ops == bittensor.proto.ReturnCode.Success:
                     logits.append(self.get_logits(r))
                 else:
                     logits.append(None)
             
             joint_logits, uids = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
+            print('joint logits')
             target_loss = self.get_target_loss_from_logit(joint_logits, inputs) 
             
+        print('got loss')
         print ('Loss\t|\t{}'.format( target_loss.item() ))
 
         # === Compute Importance loss ===
@@ -754,6 +761,7 @@ class nucleus( torch.nn.Module ):
             n = metagraph.n.item()
         )
         
+        print('returning state_dict')
         return state_dict
 
     def compute_shapely_scores(self, state_dict):
