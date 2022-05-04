@@ -725,7 +725,7 @@ class nucleus( torch.nn.Module ):
                 logits, decoder_gate_score = self.get_logits(r)
                 return i, logits, decoder_gate_score
             else:
-                return i, None
+                return i, None, None
 
         # === Compute global loss ===
         # Computes the global training loss for the nucleus by decoding all the responses
@@ -742,15 +742,13 @@ class nucleus( torch.nn.Module ):
                 for i, logit, decoder_gate_score in executor.map(map_logits, list(zip(range(len(return_ops)), return_ops.tolist(), query_responses) ) ):
                     logits.append(logit)
                     
-                    df = pd.DataFrame( decoder_gate_score.detach() ).T
-                    print(df)
-                    print(i, routing_uids)
-                    print(routing_uids[i])
-                    df['uid'] = routing_uids[i].item()
-                    if not os.path.exists (self.result_path + 'decoder_gate_score.csv'):
-                        df.to_csv(self.result_path + 'decoder_gate_score.csv')
-                    else:
-                        df.to_csv(self.result_path + 'decoder_gate_score.csv', mode = 'a', header = False)
+                    if decoder_gate_score != None:
+                        df = pd.DataFrame( decoder_gate_score.detach() ).T
+                        df['uid'] = routing_uids[i].item()
+                        if not os.path.exists (self.result_path + 'decoder_gate_score.csv'):
+                            df.to_csv(self.result_path + 'decoder_gate_score.csv')
+                        else:
+                            df.to_csv(self.result_path + 'decoder_gate_score.csv', mode = 'a', header = False)
 
                     print('got logit', i, routing_uids[i])
 
