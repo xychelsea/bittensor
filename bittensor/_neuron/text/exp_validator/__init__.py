@@ -715,12 +715,11 @@ class nucleus( torch.nn.Module ):
             response.to( self.device )
 
         def map_logits(arg):
-            print('getting logits')
-            ops, r = arg
+            i, ops, r = arg
             if ops == bittensor.proto.ReturnCode.Success:
-                return self.get_logits(r)
+                return i, self.get_logits(r)
             else:
-                return None
+                return i, None
 
         # === Compute global loss ===
         # Computes the global training loss for the nucleus by decoding all the responses
@@ -732,12 +731,11 @@ class nucleus( torch.nn.Module ):
             target_loss = self.get_target_loss ( responses_hidden, inputs )
 
         else:
-            print('getting logits')
             logits = []
             with ThreadPoolExecutor(max_workers=4) as executor:
-                for logit in executor.map(map_logits, list(zip(return_ops.tolist(), query_responses) ) ):
+                for i, logit in executor.map(map_logits, list(zip(range(len(return_ops)), return_ops.tolist(), query_responses) ) ):
                     logits.append(logit)
-                    print('got logit')
+                    print('got logit', i)
             
             joint_logits, uids = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
             print('joint logits')
