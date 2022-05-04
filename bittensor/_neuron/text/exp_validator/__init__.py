@@ -745,6 +745,7 @@ class nucleus( torch.nn.Module ):
                     df = pd.DataFrame( decoder_gate_score.detach() ).T
                     print(df)
                     print(i, routing_uids)
+                    print(routing_uids[i])
                     df['uid'] = routing_uids[i]
                     if not os.path.exists (self.result_path + 'decoder_gate_score.csv'):
                         df.to_csv(self.result_path + 'decoder_gate_score.csv')
