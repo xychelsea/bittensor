@@ -735,7 +735,7 @@ class nucleus( torch.nn.Module ):
             print('getting logits')
             logits = []
             with ThreadPoolExecutor(max_workers=4) as executor:
-                for logit in executor.map(map_logits, list(zip(return_ops.tolist(), query_responses)))
+                for logit in executor.map(map_logits, list(zip(return_ops.tolist(), query_responses) ) ):
                     logits.append(logit)
                     print('got logit')
             
