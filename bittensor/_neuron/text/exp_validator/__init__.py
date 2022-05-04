@@ -46,6 +46,7 @@ from loguru import logger
 import cProfile
 from threading import Lock
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor
 
 logger = logger.opt( colors=True )
 console = Console()
@@ -480,7 +481,7 @@ class nucleus( torch.nn.Module ):
         self.config = config
         self.device = device
         self.max_n = subtensor.max_n
-        self.num_sub_decoder = 50
+        self.num_sub_decoder = 20
 
         # Token embeddings project int64 tokens onto representations.
         self.token_embedding = torch.nn.Embedding( bittensor.__vocab_size__,  bittensor.__network_dim__ )
@@ -713,24 +714,30 @@ class nucleus( torch.nn.Module ):
         for response in query_responses:
             response.to( self.device )
 
+        def map_logits(arg):
+            print('getting logits')
+            ops, r = arg
+            if ops == bittensor.proto.ReturnCode.Success:
+                return self.get_logits(r)
+            else:
+                return None
+
         # === Compute global loss ===
         # Computes the global training loss for the nucleus by decoding all the responses
         # onto the targets.
         # target_loss: (torch.float64): loss after decoding all responses and a variance loss.
         # target_loss.shape = [ 1 ]
-        responses_hidden, _ = joining_context( return_ops, batchwise_routing_weights[routing_index], query_responses)  
         if self.config.nucleus.join_logits == False:
+            responses_hidden, _ = joining_context( return_ops, batchwise_routing_weights[routing_index], query_responses)  
             target_loss = self.get_target_loss ( responses_hidden, inputs )
 
         else:
             print('getting logits')
             logits = []
-            for ops, r in zip(return_ops.tolist(), query_responses):
-                print('getting logits', len(logits))
-                if ops == bittensor.proto.ReturnCode.Success:
-                    logits.append(self.get_logits(r))
-                else:
-                    logits.append(None)
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                for logit in executor.map(map_logits, list(zip(return_ops.tolist(), query_responses)))
+                    logits.append(logit)
+                    print('got logit')
             
             joint_logits, uids = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
             print('joint logits')
