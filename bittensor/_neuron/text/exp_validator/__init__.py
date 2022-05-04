@@ -788,7 +788,7 @@ class nucleus( torch.nn.Module ):
                 context = masked_contexts[uid.item()]
                 masked_loss = self.get_target_loss ( context, state_dict.inputs, mix = True )
                 mix_shapely_score = state_dict.mix_target_loss - masked_loss
-                print ('Mixed Shapely\t|\tuid: {}\tweight: {}\tscore: {}\tcode: {}\tsum: {}'.format( uid, state_dict.batchwise_routing_weights[state_dict.routing_index][i], -shapely_score.item(), state_dict.return_ops[i], state_dict.query_responses[i].sum()))
+                print ('Mixed Shapely\t|\tuid: {}\tweight: {}\tscore: {}\tcode: {}\tsum: {}'.format( uid, state_dict.batchwise_routing_weights[state_dict.routing_index][i], -mix_shapely_score.item(), state_dict.return_ops[i], state_dict.query_responses[i].sum()))
                 
                 shapely_scores[ i ] = (-shapely_score) + (-mix_shapely_score)
 
