@@ -21,6 +21,7 @@ Example:
     $ python3 miners/text/core_validator.py --logging.debug
 
 """
+from email.utils import decode_rfc2231
 import sys
 import argparse
 import time
@@ -384,7 +385,6 @@ class neuron:
 
                 print('updated gate score csv')
                 
-
         # Iterate epochs.
         self.epoch += 1
 
@@ -496,6 +496,8 @@ class nucleus( torch.nn.Module ):
 
         # Decoder which projects hidden unit representations on to the token dimension.
         self.decoder_gate = torch.nn.Linear( bittensor.__network_dim__, self.num_sub_decoder , bias=False)
+        self.decoder_gate_penalty = torch.nn.L1Loss(reduction='mean')
+        self.penalty = 0
         self.sub_decoder = [torch.nn.Linear( bittensor.__network_dim__, 512, bias=False ).to( self.device ) for _ in range(self.num_sub_decoder)]
         self.decoder = torch.nn.Linear( 512, bittensor.__vocab_size__ , bias=False)
 
@@ -504,6 +506,7 @@ class nucleus( torch.nn.Module ):
 
         # Crosss entropy loss for NTP.    
         self.loss_fct = torch.nn.CrossEntropyLoss()
+        self.result_path = os.path.expanduser('~/.bittensor/network_vis/data/')
     
         # SGMOE Gates: Instantiating the gates per expert.
 
@@ -520,6 +523,7 @@ class nucleus( torch.nn.Module ):
             self.interested_uids = torch.concat([self.target_uids, self.random_uids])
         else:
             self.interested_uids = self.target_uids
+
 
     @classmethod
     def add_args( cls, parser ):
@@ -568,10 +572,11 @@ class nucleus( torch.nn.Module ):
         src_mask = src_mask.to(self.config.neuron.device)
         encoded_hidden = self.encoder( hidden, mask = src_mask )
         decoder_gate_score = torch.mean(torch.mean(self.decoder_gate(encoded_hidden), axis = 0), axis = 0)
+        self.penalty += self.decoder_gate_penalty(decoder_gate_score, torch.zeros_like(decoder_gate_score))
         sub_hiddens = [score * sub_decoder(encoded_hidden) for score, sub_decoder in zip(decoder_gate_score.tolist(), self.sub_decoder)]
         decoded_targets = self.decoder( sum(sub_hiddens) )
         shift_logits = decoded_targets[..., :-1, :].contiguous()
-        return shift_logits
+        return shift_logits, decoder_gate_score
     # === Compute loss given joined responses ===
     # This function computes target loss for next token prediction given 
     # the joined responses as a hidden unit input.
@@ -582,7 +587,7 @@ class nucleus( torch.nn.Module ):
         #   Hidden units which are encoded and decoded onto targets for loss computation.
         # targets: (torch.float64): [n]
         #   Token targets,
-        shift_logits = self.get_logits(hidden)
+        shift_logits, decoder_gate_score = self.get_logits(hidden)
         shift_labels = targets[..., 1:].contiguous()
         return self.loss_fct( shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1) )
     
@@ -717,7 +722,8 @@ class nucleus( torch.nn.Module ):
         def map_logits(arg):
             i, ops, r = arg
             if ops == bittensor.proto.ReturnCode.Success:
-                return i, self.get_logits(r)
+                logits, decoder_gate_score = self.get_logits(r)
+                return i, logits, decoder_gate_score
             else:
                 return i, None
 
@@ -733,10 +739,18 @@ class nucleus( torch.nn.Module ):
         else:
             logits = []
             with ThreadPoolExecutor(max_workers=4) as executor:
-                for i, logit in executor.map(map_logits, list(zip(range(len(return_ops)), return_ops.tolist(), query_responses) ) ):
+                for i, logit, decoder_gate_score in executor.map(map_logits, list(zip(range(len(return_ops)), return_ops.tolist(), query_responses) ) ):
                     logits.append(logit)
-                    print('got logit', i)
-            
+                    
+                    df = pd.DataFrame( decoder_gate_score ).T
+                    df['uid'] = routing_uids[i]
+                    if not os.path.exists (self.result_path + 'decoder_gate_score.csv'):
+                        df.to_csv(self.result_path + 'decoder_gate_score.csv')
+                    else:
+                        df.to_csv(self.result_path + 'decoder_gate_score.csv', mode = 'a', header = False)
+
+                    print('got logit', i, routing_uids[i])
+
             joint_logits, uids = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
             print('joint logits')
             target_loss = self.get_target_loss_from_logit(joint_logits, inputs) 
@@ -751,8 +765,8 @@ class nucleus( torch.nn.Module ):
         # target_loss: (torch.float64): the total loss (global training loss + importance loss)
         # target_loss.shape = [ 1 ]
         importance_loss = self.config.nucleus.importance  * (torch.std(batchwise_routing_weights)/torch.mean(batchwise_routing_weights))**2
-        loss = target_loss #  + importance_loss
-        
+        loss = target_loss + self.penalty#  + importance_loss
+        self.penalty = 0
           
         state_dict = SimpleNamespace(
             inputs = inputs,
@@ -801,7 +815,7 @@ class nucleus( torch.nn.Module ):
                 else:
                     context = masked_contexts[uid.item()]
                 masked_loss = self.get_target_loss ( context, state_dict.inputs )
-                shapely_score = unmasked_loss - masked_loss
+                shapely_score = masked_loss
                 print ('Shapely\t|\tuid: {}\tweight: {}\tscore: {}\tcode: {}\tsum: {}'.format( uid, state_dict.batchwise_routing_weights[state_dict.routing_index][i], -shapely_score.item(), state_dict.return_ops[i], state_dict.query_responses[i].sum()))
                 shapely_scores[ i ] = -shapely_score
 
