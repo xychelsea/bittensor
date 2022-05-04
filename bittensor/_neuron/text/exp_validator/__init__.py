@@ -758,6 +758,7 @@ class nucleus( torch.nn.Module ):
             
         print('got loss')
         print ('Loss\t|\t{}'.format( target_loss.item() ))
+        print ('Penalty\t|\t{}'.format( self.penalty.item()*3 ))
 
         # === Compute Importance loss ===
         # Computes the importance loss based on the stardard error of batchwise_routing_weights
@@ -766,7 +767,7 @@ class nucleus( torch.nn.Module ):
         # target_loss: (torch.float64): the total loss (global training loss + importance loss)
         # target_loss.shape = [ 1 ]
         importance_loss = self.config.nucleus.importance  * (torch.std(batchwise_routing_weights)/torch.mean(batchwise_routing_weights))**2
-        loss = target_loss + self.penalty#  + importance_loss
+        loss = target_loss + self.penalty*3#  + importance_loss
         self.penalty = 0
           
         state_dict = SimpleNamespace(
