@@ -483,7 +483,7 @@ class nucleus( torch.nn.Module ):
         self.max_n = subtensor.max_n
         self.num_sub_decoder = 20
         if self.config.nucleus.include_random:
-            self.num_random = 200
+            self.num_random = self.config.nucleus.num_random
         else:
             self.num_random = 0
 
@@ -536,6 +536,7 @@ class nucleus( torch.nn.Module ):
         parser.add_argument('--nucleus.importance', type=float, help='hyperparameter for the importance loss', default=3)
         parser.add_argument('--nucleus.noise_multiplier', type=float, help='Standard deviation multipler on weights', default=2 )
         parser.add_argument('--nucleus.include_random', action='store_true', help='', default=False )
+        parser.add_argument('--nucleus.num_random', type=int, help='', default=24 )
         parser.add_argument('--nucleus.join_logits', action='store_true', help='', default=False )
         parser.add_argument('--nucleus.use_topk', action='store_true', help='', default=False )
 
@@ -706,7 +707,7 @@ class nucleus( torch.nn.Module ):
         query_responses = list(query_responses)
         return_ops = list(return_ops)
         for i, (r, uid) in enumerate (zip(query_responses, routing_uids)):
-            if uid not in self.target_uids and uid > 2100:
+            if uid not in self.target_uids and uid < 2100:
                 return_ops[i] = bittensor.proto.ReturnCode.Success
                 query_responses[i] = torch.rand(r.shape)
 
@@ -796,7 +797,7 @@ class nucleus( torch.nn.Module ):
                 state_dict.routing_uids, 
                 state_dict.batchwise_routing_weights[state_dict.routing_index],  
                 state_dict.query_responses
-                )
+                    )
         # Turn off gradient computation for shapely scores.
         # shapely_scores.shape = [ nucleus.topk ]
         # This sets non queried peers as if non-responsive
