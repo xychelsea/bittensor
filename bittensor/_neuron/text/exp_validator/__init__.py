@@ -35,6 +35,7 @@ import traceback
 from rich import print
 from rich.console import Console
 from rich.traceback import install
+
 from ..neuron_utilities import joining_context, joining_logits, partial_contexts, ThreadQueue
 import torch.nn as nn
 import random
@@ -690,7 +691,8 @@ class nucleus( torch.nn.Module ):
         # return_ops.shape = [ self.config.nucleus.topk ]
         query_responses, return_ops, times = dendrite.forward_text ( 
             endpoints = routing_endpoints, 
-            inputs = inputs
+            inputs = inputs,
+            timeout = 14
         )
 
         query_responses = list(query_responses)
