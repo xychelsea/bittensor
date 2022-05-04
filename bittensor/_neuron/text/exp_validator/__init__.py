@@ -518,7 +518,7 @@ class nucleus( torch.nn.Module ):
         self.reset_weights()
         
         self.target_uids = torch.tensor([26,34,42,386,1697,1701,1702,1703,1704,1705,1706,1707,1708])
-        self.random_uids = torch.tensor(list(range(24)))
+        self.random_uids = torch.tensor(list(range(2000, 2200)))
         if self.config.nucleus.include_random == True:
             self.interested_uids = torch.concat([self.target_uids, self.random_uids])
         else:
@@ -702,15 +702,12 @@ class nucleus( torch.nn.Module ):
         )
         print('forward_text finished')
 
-        
-
         query_responses = list(query_responses)
         return_ops = list(return_ops)
         for i, (r, uid) in enumerate (zip(query_responses, routing_uids)):
-            if uid not in self.target_uids:
+            if uid not in self.target_uids and uid > 2100:
                 return_ops[i] = bittensor.proto.ReturnCode.Success
                 query_responses[i] = torch.rand(r.shape)
-
 
         return_ops = torch.tensor(return_ops)
         
