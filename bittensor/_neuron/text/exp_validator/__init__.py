@@ -488,7 +488,7 @@ class nucleus( torch.nn.Module ):
         self.routing_encoder = TransformerEncoder( self.routing_encoder_layers, 1 )
 
         # Encoder projects response representations onto hidden units.
-        self.encoder_layers = TransformerEncoderLayer( bittensor.__network_dim__, config.nucleus.nhead, config.nucleus.nhid, config.nucleus.dropout, batch_first=True)
+        self.encoder_layers = TransformerEncoderLayer( bittensor.__network_dim__, config.nucleus.encoder_nhead, config.nucleus.nhid, config.nucleus.dropout, batch_first=True)
         self.encoder = TransformerEncoder( self.encoder_layers, config.nucleus.nlayers )
 
         # Decoder which projects hidden unit representations on to the token dimension.
@@ -521,6 +521,7 @@ class nucleus( torch.nn.Module ):
         parser.add_argument('--nucleus.topk', type=int, help='the number of peers queried during each remote forward call', default = 20 )
         parser.add_argument('--nucleus.nhid', type=int, help='the dimension of the feedforward network model in nn.TransformerEncoder', default=200 )
         parser.add_argument('--nucleus.nhead', type=int, help='the number of heads in the multiheadattention models', default = 2 )
+        parser.add_argument('--nucleus.encoder_nhead', type=int, help='the number of heads in the multiheadattention models', default = 2 )
         parser.add_argument('--nucleus.nlayers', type=int, help='the number of nn.TransformerEncoderLayer in nn.TransformerEncoder', default=2 )
         parser.add_argument('--nucleus.dropout', type=float, help='the dropout value', default=0.2)
         parser.add_argument('--nucleus.importance', type=float, help='hyperparameter for the importance loss', default=3)
