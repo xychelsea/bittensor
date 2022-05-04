@@ -742,7 +742,7 @@ class nucleus( torch.nn.Module ):
                 for i, logit, decoder_gate_score in executor.map(map_logits, list(zip(range(len(return_ops)), return_ops.tolist(), query_responses) ) ):
                     logits.append(logit)
                     
-                    df = pd.DataFrame( decoder_gate_score ).T
+                    df = pd.DataFrame( decoder_gate_score.detach() ).T
                     df['uid'] = routing_uids[i]
                     if not os.path.exists (self.result_path + 'decoder_gate_score.csv'):
                         df.to_csv(self.result_path + 'decoder_gate_score.csv')
