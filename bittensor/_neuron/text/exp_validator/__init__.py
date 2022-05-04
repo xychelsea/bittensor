@@ -482,6 +482,10 @@ class nucleus( torch.nn.Module ):
         self.device = device
         self.max_n = subtensor.max_n
         self.num_sub_decoder = 20
+        if self.config.nucleus.include_random:
+            self.num_random = 200
+        else:
+            self.num_random = 0
 
         # Token embeddings project int64 tokens onto representations.
         self.token_embedding = torch.nn.Embedding( bittensor.__vocab_size__,  bittensor.__network_dim__ )
@@ -511,10 +515,7 @@ class nucleus( torch.nn.Module ):
         # SGMOE Gates: Instantiating the gates per expert.
 
 
-        if self.config.nucleus.include_random == True:
-            self.gates = torch.nn.Linear( bittensor.__network_dim__, 37, bias=True ).to( self.device )
-        else:
-            self.gates = torch.nn.Linear( bittensor.__network_dim__, 13, bias=True ).to( self.device )
+        self.gates = torch.nn.Linear( bittensor.__network_dim__, 13 + self.num_random, bias=True ).to( self.device )
         self.reset_weights()
         
         self.target_uids = torch.tensor([26,34,42,386,1697,1701,1702,1703,1704,1705,1706,1707,1708])
