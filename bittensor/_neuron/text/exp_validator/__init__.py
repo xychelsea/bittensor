@@ -45,6 +45,7 @@ from loguru import logger
 import cProfile
 from threading import Lock
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor
 
 logger = logger.opt( colors=True )
 console = Console()
@@ -703,27 +704,34 @@ class nucleus( torch.nn.Module ):
         # Onto the correct device.
         for response in query_responses:
             response.to( self.device )
+        def map_logits(arg):
+            i, ops, r = arg
+            if ops == bittensor.proto.ReturnCode.Success:
+                return i, self.get_logits(r)
+            else:
+                return i, None
 
         # === Compute global loss ===
         # Computes the global training loss for the nucleus by decoding all the responses
         # onto the targets.
         # target_loss: (torch.float64): loss after decoding all responses and a variance loss.
         # target_loss.shape = [ 1 ]
-        responses_hidden, _ = joining_context( return_ops, batchwise_routing_weights[routing_index], query_responses)  
         if self.config.nucleus.join_logits == False:
+            responses_hidden, _ = joining_context( return_ops, batchwise_routing_weights[routing_index], query_responses)  
             target_loss = self.get_target_loss ( responses_hidden, inputs )
 
         else:
             logits = []
-            for ops, r in zip(return_ops.tolist(), query_responses):
-                if ops == bittensor.proto.ReturnCode.Success:
-                    logits.append(self.get_logits(r))
-                else:
-                    logits.append(None)
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                for i, logit in executor.map(map_logits, list(zip(range(len(return_ops)), return_ops.tolist(), query_responses) ) ):
+                    logits.append(logit)
+                    print('got logit', i)
             
             joint_logits, uids = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
+            print('joint logits')
             target_loss = self.get_target_loss_from_logit(joint_logits, inputs) 
             
+        print('got loss')
         print ('Loss\t|\t{}'.format( target_loss.item() ))
 
         # === Compute Importance loss ===
