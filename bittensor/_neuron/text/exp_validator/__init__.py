@@ -374,7 +374,7 @@ class neuron:
                 # === Get another round of forward requests ===
                 self.forward_thread_queue.resume()
                 
-                df = pd.DataFrame( self.nucleus.gates.detach() ).T
+                df = pd.DataFrame( torch.nn.functional.normalize(next(self.nucleus.gates.parameters()), dim = 0).detach().sum(dim = 1) ).T
                 df.columns = self.nucleus.interested_uids.tolist()
                 df['block'] = self.subtensor.block
                 df = pd.concat([self.header, df])
@@ -515,8 +515,7 @@ class nucleus( torch.nn.Module ):
         # SGMOE Gates: Instantiating the gates per expert.
 
 
-        # self.gates = torch.nn.Linear( bittensor.__network_dim__, 13 + self.num_random, bias=True ).to( self.device )
-        self.gates = torch.nn.parameter.Parameter(torch.ones(13+self.num_random) / (13 + self.num_random))
+        self.gates = torch.nn.Linear( bittensor.__network_dim__, 13 + self.num_random, bias=True ).to( self.device )
         self.gate_relu = nn.ReLU()
         self.reset_weights()
         
@@ -558,7 +557,7 @@ class nucleus( torch.nn.Module ):
         # === Resets all the weights using xavier initialization. ===
         torch.nn.init.xavier_uniform_ ( self.token_embedding.weight )
         torch.nn.init.xavier_uniform_ ( self.decoder.weight )
-        torch.nn.init.constant_( self.gates, 1/13+self.num_random )
+        torch.nn.init.constant_( self.gates.weight, 0 )
         def init_xavier( component ):
             try:
                 torch.nn.init.xavier_uniform_( component.weight )
@@ -633,26 +632,26 @@ class nucleus( torch.nn.Module ):
         # embedding: retrieve learned representation vectors for input vocabulary tokens.
         # inputs.shape = [batch_size, sequence_len]
         # embedding.shape = [batch_size, sequence_len, bittensor.__network_dim__]
-        # embedding =  self.token_embedding( inputs )* math.sqrt( bittensor.__network_dim__ )
+        embedding =  self.token_embedding( inputs )* math.sqrt( bittensor.__network_dim__ )
         
         # === Create an attention mask ===
         # The attention mask will mask out parts of the context
         # This prevents cheating and forward-looking when predicting each token in the sequence.
         # src_mask: (torch.FloatTensor) attention mask adds -inf to positions not allowed to attend
         # src_mask.shape = [sequence_len, sequence_len]
-        # src_mask = torch.triu(torch.ones(embedding.size(1), embedding.size(1)) * float('-inf'), diagonal=1)
-        # src_mask = src_mask.to(self.config.neuron.device)
+        src_mask = torch.triu(torch.ones(embedding.size(1), embedding.size(1)) * float('-inf'), diagonal=1)
+        src_mask = src_mask.to(self.config.neuron.device)
 
         # === Apply the positional encoding to help select endpoints ===
         # The positional encoder provides information based on the relative postion of each token 
         # embedding.shape = [batch_size, sequence_len, bittensor.__network_dim__]
         # pos_embedding: (torch.FloatTensor) positional encoded embedding.
         # pos_embedding.shape = [batch_size, sequence_len, bittensor.__network_dim__]
-        # pos_embedding = self.local_pos_encoder(embedding)
+        pos_embedding = self.local_pos_encoder(embedding)
 
         # routing_context: (torch.FloatTensor): context tensor which is used to select endpoints.
         # routing_context.shape = [ batch size, __network_dim__ ]
-        # routing_context = self.routing_encoder( pos_embedding, mask = src_mask )
+        routing_context = self.routing_encoder( pos_embedding, mask = src_mask )
 
         # === Get weights for uids. ===
         # We iterate over each of the network uids and compute a querying score for each
@@ -660,15 +659,15 @@ class nucleus( torch.nn.Module ):
         # routing_weights: (torch.FloatTensor): score per example, per endpoint.
         # routing_weights.shape = [ batch size, __network_n__ ]
         # The gates act over the last embedding of the routing_context.
-        routing_weights = self.gates# self.gates( routing_context[:,-1,:] )
+        routing_weights = self.gates( routing_context[:,-1,:] )
 
         # === Normalize routing_weights across batch dimension and add noise. ===
         # We are summing across the batch dimension to create a per-batch score per endpoint.
         # The resulting routing_weights tensor is a score per expert.
         # routing_weights: (torch.FloatTensor): normalized weights across batch dimension with noise.
         # routing_weights.shape = [ n_filtered ]
-        # batchwise_routing_weights = torch.mean(routing_weights, axis = 0)[:metagraph.n]
-        batchwise_routing_weights = self.gate_relu(routing_weights)      
+        batchwise_routing_weights = torch.mean(routing_weights, axis = 0)[:metagraph.n]
+        batchwise_routing_weights = self.gate_relu(batchwise_routing_weights)      
         noisy_routing_weights = torch.normal( 0, 1, size=( batchwise_routing_weights.size())).to( self.config.neuron.device )
         
         if self.config.nucleus.use_topk:
