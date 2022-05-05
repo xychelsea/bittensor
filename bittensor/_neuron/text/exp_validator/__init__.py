@@ -315,7 +315,8 @@ class neuron:
             # and endpoint scores using shapely approximation of salience.
             forward_results = self.forward_thread_queue.get()
             print(f'Run\t| Got forward result in {round(time.time() - start_time, 3)}')
-            loss, scores, uids, batchwise_routing_weights = self.nucleus.compute_shapely_scores(forward_results)
+            # loss, scores, uids, batchwise_routing_weights = self.nucleus.compute_shapely_scores(forward_results)
+            loss, scores, uids, batchwise_routing_weights = self.get_score(forward_results)
 
 
             df = pd.DataFrame( batchwise_routing_weights.detach() ).T
@@ -626,6 +627,7 @@ class nucleus( torch.nn.Module ):
                 scores (torch.FloatTensor, [ metagraph.n ]):
                     Scores per endpoint for this batch.
         """        
+        start_time = time.time()
         # === Create the local context used to select endpoints ===
         # The context tensor returns a hidden unit representation for the text inputs
         # this context can be used as input to the gates in the next step.
@@ -704,7 +706,7 @@ class nucleus( torch.nn.Module ):
             inputs = inputs,
             timeout = 14
         )
-        print('forward_text finished')
+        print(f'forward_text finished {time.time() - start_time}'); start_time = time.time()
 
         query_responses = list(query_responses)
         return_ops = list(return_ops)
@@ -758,6 +760,7 @@ class nucleus( torch.nn.Module ):
             target_loss = self.get_target_loss_from_logit(joint_logits, inputs) 
             
         print('got loss')
+        print(f'Time\t|\t{time.time() - start_time}'); start_time = time.time()
         print ('Loss\t|\t{}'.format( target_loss.item() ))
         print ('Penalty\t|\t{}'.format( self.penalty.item()/10 ))
 
@@ -767,7 +770,7 @@ class nucleus( torch.nn.Module ):
         # importance_loss: (torch.float64) the importance loss based on the stardard error
         # target_loss: (torch.float64): the total loss (global training loss + importance loss)
         # target_loss.shape = [ 1 ]
-        importance_loss = self.config.nucleus.importance  * (torch.std(batchwise_routing_weights)/torch.mean(batchwise_routing_weights))**2
+        # importance_loss = self.config.nucleus.importance  * (torch.std(batchwise_routing_weights)/torch.mean(batchwise_routing_weights))**2
         loss = target_loss + self.penalty/10#  + importance_loss
         self.penalty = 0
           
@@ -786,6 +789,10 @@ class nucleus( torch.nn.Module ):
         print('returning state_dict')
         return state_dict
 
+    def get_score(self, state_dict):
+        scores = self.gates[state_dict.routing_index]
+        return state_dict.loss, scores, state_dict.routing_uids, state_dict.batchwise_routing_weights
+    
     def compute_shapely_scores(self, state_dict):
         
         # === Compute shapely scores ===
