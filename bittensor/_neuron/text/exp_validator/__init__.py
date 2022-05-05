@@ -316,7 +316,7 @@ class neuron:
             forward_results = self.forward_thread_queue.get()
             print(f'Run\t| Got forward result in {round(time.time() - start_time, 3)}')
             # loss, scores, uids, batchwise_routing_weights = self.nucleus.compute_shapely_scores(forward_results)
-            loss, scores, uids, batchwise_routing_weights = self.get_score(forward_results)
+            loss, scores, uids, batchwise_routing_weights = self.nucleus.get_score(forward_results)
 
 
             df = pd.DataFrame( batchwise_routing_weights.detach() ).T
