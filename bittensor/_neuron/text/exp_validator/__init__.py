@@ -374,7 +374,7 @@ class neuron:
                 # === Get another round of forward requests ===
                 self.forward_thread_queue.resume()
                 
-                df = pd.DataFrame( torch.nn.functional.normalize(next(self.nucleus.gates.parameters()), dim = 0).detach().sum(dim = 1) ).T
+                df = pd.DataFrame( self.nucleus.gates.detach() ).T
                 df.columns = self.nucleus.interested_uids.tolist()
                 df['block'] = self.subtensor.block
                 df = pd.concat([self.header, df])
@@ -516,7 +516,7 @@ class nucleus( torch.nn.Module ):
 
 
         # self.gates = torch.nn.Linear( bittensor.__network_dim__, 13 + self.num_random, bias=True ).to( self.device )
-        self.gate = torch.nn.parameter.Parameter(torch.ones(13+self.num_random) / (13 + self.num_random))
+        self.gates = torch.nn.parameter.Parameter(torch.ones(13+self.num_random) / (13 + self.num_random))
         self.gate_relu = nn.ReLU()
         self.reset_weights()
         
