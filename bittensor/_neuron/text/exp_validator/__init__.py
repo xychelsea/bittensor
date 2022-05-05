@@ -329,21 +329,21 @@ class neuron:
                 df.to_csv(self.result_path + 'routing_weight.csv', mode = 'a', header = False)
             print('updated routing weight csv')
             
-            df = pd.DataFrame( scores ).T
-            df.columns = uids.tolist()
-            df['block'] = self.subtensor.block
+            # df = pd.DataFrame( scores ).T
+            # df.columns = uids.tolist()
+            # df['block'] = self.subtensor.block
 
-            df = pd.concat([self.header, df])
-            if not os.path.exists (self.result_path + 'shapely_scores.csv'):
-                df.to_csv(self.result_path + 'shapely_scores.csv') 
-            else:
-                df.to_csv(self.result_path + 'shapely_scores.csv', mode = 'a', header = False) 
-            print(df)
-            print('updated shapely score csv')
+            # df = pd.concat([self.header, df])
+            # if not os.path.exists (self.result_path + 'shapely_scores.csv'):
+            #     df.to_csv(self.result_path + 'shapely_scores.csv') 
+            # else:
+            #     df.to_csv(self.result_path + 'shapely_scores.csv', mode = 'a', header = False) 
+            # print(df)
+            # print('updated shapely score csv')
 
             # === Scoring ===
             # Updates moving averages and history.
-            self.moving_avg_scores[uids] = self.moving_avg_scores[uids]*(0.99) + scores*(0.01)
+            # self.moving_avg_scores[uids] = self.moving_avg_scores[uids]*(0.99) + scores*(0.01)
         
             # === State update ===
             # Prints step logs to screen.
