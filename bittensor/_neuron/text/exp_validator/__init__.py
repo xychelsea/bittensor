@@ -558,7 +558,7 @@ class nucleus( torch.nn.Module ):
         # === Resets all the weights using xavier initialization. ===
         torch.nn.init.xavier_uniform_ ( self.token_embedding.weight )
         torch.nn.init.xavier_uniform_ ( self.decoder.weight )
-        torch.nn.init.constant_( self.gates, 1/13+self.num_random )
+        torch.nn.init.constant_( self.gates, 1/(13+self.num_random) )
         def init_xavier( component ):
             try:
                 torch.nn.init.xavier_uniform_( component.weight )
