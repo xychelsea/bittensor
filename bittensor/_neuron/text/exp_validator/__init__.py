@@ -790,7 +790,7 @@ class nucleus( torch.nn.Module ):
         return state_dict
 
     def get_score(self, state_dict):
-        scores = self.gates[state_dict.routing_index]
+        scores = state_dict.batchwise_routing_weights.detach()
         return state_dict.loss, scores, state_dict.routing_uids, state_dict.batchwise_routing_weights
     
     def compute_shapely_scores(self, state_dict):
