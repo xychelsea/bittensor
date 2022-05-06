@@ -629,6 +629,7 @@ class nucleus( torch.nn.Module ):
                 scores (torch.FloatTensor, [ metagraph.n ]):
                     Scores per endpoint for this batch.
         """        
+        start_time = time.tim()
         # === Create the local context used to select endpoints ===
         # The context tensor returns a hidden unit representation for the text inputs
         # this context can be used as input to the gates in the next step.
@@ -707,7 +708,7 @@ class nucleus( torch.nn.Module ):
             inputs = inputs,
             timeout = 14
         )
-        print('forward_text finished')
+        print(f'forward_text finished {time.time() - start_time}'); start_time = time.time()
 
         query_responses = list(query_responses)
         return_ops = list(return_ops)
@@ -742,6 +743,7 @@ class nucleus( torch.nn.Module ):
 
         else:
             logits = []
+            dfs = []
             with ThreadPoolExecutor(max_workers=self.config.nucleus.num_workers) as executor:
                 for i, logit, decoder_gate_score in executor.map(map_logits, list(zip(range(len(return_ops)), return_ops.tolist(), query_responses) ) ):
                     logits.append(logit)
@@ -749,18 +751,18 @@ class nucleus( torch.nn.Module ):
                     if decoder_gate_score != None:
                         df = pd.DataFrame( decoder_gate_score.detach() ).T
                         df['uid'] = routing_uids[i].item()
-                        if not os.path.exists (self.result_path + 'decoder_gate_score.csv'):
-                            df.to_csv(self.result_path + 'decoder_gate_score.csv')
-                        else:
-                            df.to_csv(self.result_path + 'decoder_gate_score.csv', mode = 'a', header = False)
+                        dfs.append(df)
+                    print('got logit', i, routing_uids[i], batchwise_routing_weights[routing_index][i].detach().item())
 
-                    print('got logit', i, routing_uids[i], batchwise_routing_weights[routing_index][i])
-
+            df = pd.concat(dfs, ignore_index=True)
+            if not os.path.exists (self.result_path + 'decoder_gate_score.csv'):
+                df.to_csv(self.result_path + 'decoder_gate_score.csv')
+            else:
+                df.to_csv(self.result_path + 'decoder_gate_score.csv', mode = 'a', header = False)
             joint_logits, uids = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
-            print('joint logits')
             target_loss = self.get_target_loss_from_logit(joint_logits, inputs) 
             
-        print('got loss')
+        print (f'Time\t|\t{time.time() - start_time}'); start_time = time.time()
         print ('Loss\t|\t{}'.format( target_loss.item() ))
         print ('Penalty\t|\t{}'.format( self.penalty.item()/10 ))
 
