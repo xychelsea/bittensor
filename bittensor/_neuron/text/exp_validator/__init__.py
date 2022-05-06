@@ -741,7 +741,7 @@ class nucleus( torch.nn.Module ):
 
         else:
             logits = []
-            with ThreadPoolExecutor(max_workers=self.config.num_workers) as executor:
+            with ThreadPoolExecutor(max_workers=self.config.nucleus.num_workers) as executor:
                 for i, logit, decoder_gate_score in executor.map(map_logits, list(zip(range(len(return_ops)), return_ops.tolist(), query_responses) ) ):
                     logits.append(logit)
                     
