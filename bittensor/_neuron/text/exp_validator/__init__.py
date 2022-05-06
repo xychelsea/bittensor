@@ -484,7 +484,7 @@ class nucleus( torch.nn.Module ):
         self.device = device
         self.max_n = subtensor.max_n
         self.num_sub_decoder = self.config.nucleus.num_sub_decoder
-        self.num_random = self.config.nucleus.num_random
+        self.num_others = self.config.nucleus.num_others
 
         # Token embeddings project int64 tokens onto representations.
         self.token_embedding = torch.nn.Embedding( bittensor.__vocab_size__,  bittensor.__network_dim__ )
@@ -514,14 +514,14 @@ class nucleus( torch.nn.Module ):
         # SGMOE Gates: Instantiating the gates per expert.
 
 
-        # self.gates = torch.nn.Linear( bittensor.__network_dim__, 13 + self.num_random, bias=True ).to( self.device )
-        self.gates = torch.nn.parameter.Parameter(torch.ones(13+self.num_random) / (13 + self.num_random))
+        # self.gates = torch.nn.Linear( bittensor.__network_dim__, 13 + self.num_others, bias=True ).to( self.device )
+        self.gates = torch.nn.parameter.Parameter(torch.ones(13+self.num_others) / (13 + self.num_others))
         self.gate_relu = nn.ReLU()
         self.reset_weights()
         
         self.target_uids = torch.tensor([26,34,42,386,1697,1701,1702,1703,1704,1705,1706,1707,1708])
-        self.random_uids = torch.tensor(list(range(2000, 2000 + self.num_random)))
-        if self.config.nucleus.num_random > 0:
+        self.random_uids = torch.tensor(list(range(2000, 2000 + self.num_others)))
+        if self.config.nucleus.num_others > 0:
             self.interested_uids = torch.concat([self.target_uids, self.random_uids])
         else:
             self.interested_uids = self.target_uids
@@ -537,7 +537,8 @@ class nucleus( torch.nn.Module ):
         parser.add_argument('--nucleus.importance', type=float, help='hyperparameter for the importance loss', default=3)
         parser.add_argument('--nucleus.noise_multiplier', type=float, help='Standard deviation multipler on weights', default=2 )
         parser.add_argument('--nucleus.num_sub_decoder', type=int, help='', default=20 )
-        parser.add_argument('--nucleus.num_random', type=int, help='', default=24 )
+        parser.add_argument('--nucleus.num_others', type=int, help='', default=24 )
+        parser.add_argument('--nucleus.num_random', type=int, help='', default=12 )
         parser.add_argument('--nucleus.join_logits', action='store_true', help='', default=False )
         parser.add_argument('--nucleus.use_topk', action='store_true', help='', default=False )
         parser.add_argument('--nucleus.num_workers', type=int, help='', default=4 )
@@ -558,7 +559,7 @@ class nucleus( torch.nn.Module ):
         # === Resets all the weights using xavier initialization. ===
         torch.nn.init.xavier_uniform_ ( self.token_embedding.weight )
         torch.nn.init.xavier_uniform_ ( self.decoder.weight )
-        torch.nn.init.constant_( self.gates, 1/(13+self.num_random) )
+        torch.nn.init.constant_( self.gates, 1/(13+self.num_others) )
         def init_xavier( component ):
             try:
                 torch.nn.init.xavier_uniform_( component.weight )
@@ -710,7 +711,7 @@ class nucleus( torch.nn.Module ):
         query_responses = list(query_responses)
         return_ops = list(return_ops)
         for i, (r, uid) in enumerate (zip(query_responses, routing_uids)):
-            if uid not in self.target_uids and uid < 2100:
+            if uid not in self.target_uids and uid < 2000 + self.config.nucleus.num_random:
                 return_ops[i] = bittensor.proto.ReturnCode.Success
                 query_responses[i] = torch.rand(r.shape)
 
