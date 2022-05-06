@@ -123,7 +123,7 @@ class neuron:
         
         self.result_path = os.path.expanduser('~/.bittensor/network_vis/data/')
         self.header = pd.DataFrame(columns = self.nucleus.interested_uids.tolist() + ['block'])
-
+        self.loss = 0
         if not os.path.isdir(os.path.expanduser('~/.bittensor/network_vis/')):
             os.mkdir(os.path.expanduser('~/.bittensor/network_vis/'))
 
@@ -218,7 +218,7 @@ class neuron:
                 
         # === Backward ===
         # Backwards gradients through model to train gating and remote endpoints.
-        (result.loss / self.config.neuron.forward_num).backward()
+        self.loss += (result.loss / self.config.neuron.forward_num) 
         return result
 
     def run ( self ):
@@ -315,7 +315,7 @@ class neuron:
             # and endpoint scores using shapely approximation of salience.
             forward_results = self.forward_thread_queue.get()
             print(f'Run\t| Got forward result in {round(time.time() - start_time, 3)}')
-            loss, scores, uids, batchwise_routing_weights = self.nucleus.compute_shapely_scores(forward_results)
+            loss, _, uids, batchwise_routing_weights = forward_results.loss, None, forward_results.routing_uids, forward_results.batchwise_routing_weights
 
 
             df = pd.DataFrame( batchwise_routing_weights.detach() ).T
@@ -328,21 +328,21 @@ class neuron:
                 df.to_csv(self.result_path + 'routing_weight.csv', mode = 'a', header = False)
             print('updated routing weight csv')
             
-            df = pd.DataFrame( scores ).T
-            df.columns = uids.tolist()
-            df['block'] = self.subtensor.block
+            # df = pd.DataFrame( scores ).T
+            # df.columns = uids.tolist()
+            # df['block'] = self.subtensor.block
 
-            df = pd.concat([self.header, df])
-            if not os.path.exists (self.result_path + 'shapely_scores.csv'):
-                df.to_csv(self.result_path + 'shapely_scores.csv') 
-            else:
-                df.to_csv(self.result_path + 'shapely_scores.csv', mode = 'a', header = False) 
-            print(df)
-            print('updated shapely score csv')
+            # df = pd.concat([self.header, df])
+            # if not os.path.exists (self.result_path + 'shapely_scores.csv'):
+            #     df.to_csv(self.result_path + 'shapely_scores.csv') 
+            # else:
+            #     df.to_csv(self.result_path + 'shapely_scores.csv', mode = 'a', header = False) 
+            # print(df)
+            # print('updated shapely score csv')
 
             # === Scoring ===
             # Updates moving averages and history.
-            self.moving_avg_scores[uids] = self.moving_avg_scores[uids]*(0.99) + scores*(0.01)
+            # self.moving_avg_scores[uids] = self.moving_avg_scores[uids]*(0.99) + scores*(0.01)
         
             # === State update ===
             # Prints step logs to screen.
@@ -365,6 +365,8 @@ class neuron:
             if self.forward_thread_queue.paused() and self.forward_thread_queue.is_empty():
                 print('Run\t| Model update')
 
+                self.loss.backward()
+                self.loss = 0
                 # === Apply gradients ===
                 # Applies local gradients to parameters.
                 clip_grad_norm_(self.nucleus.parameters(), self.config.neuron.clip_gradients)
@@ -481,11 +483,8 @@ class nucleus( torch.nn.Module ):
         self.config = config
         self.device = device
         self.max_n = subtensor.max_n
-        self.num_sub_decoder = 20
-        if self.config.nucleus.include_random:
-            self.num_random = self.config.nucleus.num_random
-        else:
-            self.num_random = 0
+        self.num_sub_decoder = self.config.nucleus.num_sub_decoder
+        self.num_random = self.config.nucleus.num_random
 
         # Token embeddings project int64 tokens onto representations.
         self.token_embedding = torch.nn.Embedding( bittensor.__vocab_size__,  bittensor.__network_dim__ )
@@ -537,7 +536,7 @@ class nucleus( torch.nn.Module ):
         parser.add_argument('--nucleus.dropout', type=float, help='the dropout value', default=0.2)
         parser.add_argument('--nucleus.importance', type=float, help='hyperparameter for the importance loss', default=3)
         parser.add_argument('--nucleus.noise_multiplier', type=float, help='Standard deviation multipler on weights', default=2 )
-        parser.add_argument('--nucleus.include_random', action='store_true', help='', default=False )
+        parser.add_argument('--nucleus.num_sub_decoder', type=int, help='', default=20 )
         parser.add_argument('--nucleus.num_random', type=int, help='', default=24 )
         parser.add_argument('--nucleus.join_logits', action='store_true', help='', default=False )
         parser.add_argument('--nucleus.use_topk', action='store_true', help='', default=False )
