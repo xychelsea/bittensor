@@ -218,7 +218,9 @@ class neuron:
                 
         # === Backward ===
         # Backwards gradients through model to train gating and remote endpoints.
+        start_time = time.time()
         (result.loss / self.config.neuron.forward_num).backward()
+        print('backward took', time.time() - start_time)
         return result
 
     def run ( self ):
