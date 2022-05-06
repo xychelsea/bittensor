@@ -629,7 +629,7 @@ class nucleus( torch.nn.Module ):
                 scores (torch.FloatTensor, [ metagraph.n ]):
                     Scores per endpoint for this batch.
         """        
-        start_time = time.tim()
+        start_time = time.time()
         # === Create the local context used to select endpoints ===
         # The context tensor returns a hidden unit representation for the text inputs
         # this context can be used as input to the gates in the next step.
