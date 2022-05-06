@@ -501,7 +501,8 @@ class nucleus( torch.nn.Module ):
         self.decoder_gate = torch.nn.Linear( bittensor.__network_dim__, self.num_sub_decoder , bias=False)
         self.decoder_gate_penalty = torch.nn.L1Loss(reduction='mean')
         self.penalty = 0
-        self.sub_decoder = [torch.nn.Linear( bittensor.__network_dim__, 512, bias=False ).to( self.device ) for _ in range(self.num_sub_decoder)]
+        sub_decoder = [torch.nn.Linear( bittensor.__network_dim__, 512, bias=False ).to( self.device ) for _ in range(self.num_sub_decoder)]
+        self.sub_decoder = nn.ModuleList(sub_decoder)
         self.decoder = torch.nn.Linear( 512, bittensor.__vocab_size__ , bias=False)
 
         # Positional Encoding
@@ -753,7 +754,7 @@ class nucleus( torch.nn.Module ):
                         else:
                             df.to_csv(self.result_path + 'decoder_gate_score.csv', mode = 'a', header = False)
 
-                    print('got logit', i, routing_uids[i])
+                    print('got logit', i, routing_uids[i], batchwise_routing_weights[routing_index][i])
 
             joint_logits, uids = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
             print('joint logits')
