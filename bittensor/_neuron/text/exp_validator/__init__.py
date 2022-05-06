@@ -516,7 +516,7 @@ class nucleus( torch.nn.Module ):
 
 
         # self.gates = torch.nn.Linear( bittensor.__network_dim__, 13 + self.num_others, bias=True ).to( self.device )
-        self.gates = torch.nn.parameter.Parameter(torch.ones(13+self.num_others) / (13 + self.num_others))
+        self.gates = torch.nn.parameter.Parameter(torch.ones(13+self.num_others))
         self.gate_relu = nn.ReLU()
         self.reset_weights()
         
@@ -560,7 +560,7 @@ class nucleus( torch.nn.Module ):
         # === Resets all the weights using xavier initialization. ===
         torch.nn.init.xavier_uniform_ ( self.token_embedding.weight )
         torch.nn.init.xavier_uniform_ ( self.decoder.weight )
-        torch.nn.init.constant_( self.gates, 1/(13+self.num_others) )
+        torch.nn.init.xavier_normal_ ( self.gates, std = 1/(13 + self.num_others) )
         def init_xavier( component ):
             try:
                 torch.nn.init.xavier_uniform_( component.weight )
@@ -671,7 +671,7 @@ class nucleus( torch.nn.Module ):
         # routing_weights: (torch.FloatTensor): normalized weights across batch dimension with noise.
         # routing_weights.shape = [ n_filtered ]
         # batchwise_routing_weights = torch.mean(routing_weights, axis = 0)[:metagraph.n]
-        batchwise_routing_weights = self.gate_relu(routing_weights -  1/(13+self.num_others))      
+        batchwise_routing_weights = self.gate_relu(routing_weights)      
         noisy_routing_weights = torch.normal( 0, 1, size=( batchwise_routing_weights.size())).to( self.config.neuron.device )
         
         if self.config.nucleus.use_topk:
