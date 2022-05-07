@@ -272,7 +272,8 @@ class neuron:
         print ( '\nEra:', '\n\t batch_size:', batch_size, '\n\t sequence_length:', sequence_length, '\n\t n_topk_peer_weights:', n_topk_peer_weights,
                 '\n\t max_allowed_ratio:', max_allowed_ratio, '\n\t blocks_per_epoch:', blocks_per_epoch, '\n\t epochs_until_reset:', epochs_until_reset, 
                 '\n\t until_reset:', self.epoch % epochs_until_reset, '\n\t current_block:', current_block, '\n')
-        if self.config.using_wandb:
+        # if self.config.using_wandb:
+        if False:
             wandb.log( {    'era/batch_size': batch_size, 'era/sequence_length': sequence_length, 'era/n_topk_peer_weights': n_topk_peer_weights, 
                             'era/max_allowed_ratio': max_allowed_ratio, 'era/blocks_per_epoch': blocks_per_epoch, 'era/epochs_until_reset': epochs_until_reset, 
                 }, step = current_block )
@@ -379,7 +380,8 @@ class neuron:
             # === Logs ===
             print( '\nStep:', '\n\t epoch:', self.epoch, '\n\t epoch_steps:', epoch_steps, '\n\t global_steps:', self.global_step, '\n\t step_time:', step_time, '\n\t loss:', loss.item(),
                    '\n\t current_block', current_block, '\n\t blocks remaining:', current_block - start_block, '/', blocks_per_epoch, '\n')
-            if self.config.using_wandb:
+            # if self.config.using_wandb:
+            if False:
                 wandb.log( { 'epoch/epoch': self.epoch, 'epoch/epoch_steps': epoch_steps, 'epoch/global_steps': self.global_step, 'epoch/loss': loss.item(), 'epoch/time': step_time }, step = current_block )
                 step_topk_scores, step_topk_uids = bittensor.unbiased_topk( self.moving_avg_scores, k = n_topk_peer_weights )
                 step_topk_normalized = bittensor.utils.weight_utils.normalize_max_multiple( x = step_topk_scores, multiple = max_allowed_ratio )
@@ -422,7 +424,8 @@ class neuron:
 
         # === Wandb Logs ===
         # Optionally send validator logs to wandb.
-        if self.config.using_wandb:
+        # if self.config.using_wandb:
+        if False:
             # Logging history to wandb.
             df = pandas.concat( [
                 bittensor.utils.indexed_values_to_dataframe( prefix = 'weights', index = topk_uids, values = torch.zeros( self.metagraph.n ).scatter( dim = 0, src = topk_scores, index = topk_uids ) ),
