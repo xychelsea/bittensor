@@ -772,10 +772,11 @@ class nucleus( torch.nn.Module ):
                 for i, logit, decoder_gate_score in executor.map(map_logits, list(zip(range(len(return_ops)), return_ops.tolist(), query_responses, routing_uids) ) ):
                     logits.append(logit)
                     if logit != None: 
+                        print(logit.shape)
                         losses.append(self.get_target_loss_from_logit(logit, inputs))
                     else:
                         losses.append(None)
-                        
+
                     if decoder_gate_score != None:
                         df = pd.DataFrame( decoder_gate_score.detach() ).T
                         df['uid'] = routing_uids[i].item()
