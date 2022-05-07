@@ -600,7 +600,9 @@ class nucleus( torch.nn.Module ):
         decoder_gate_score = torch.mean(torch.mean(self.decoder_gate(encoded_hidden), axis = 0), axis = 0)
         self.penalty += self.decoder_gate_penalty(decoder_gate_score, torch.zeros_like(decoder_gate_score))
         sub_hiddens = self.sub_decoder[gate](encoded_hidden)# [score * sub_decoder(encoded_hidden) for score, sub_decoder in zip(decoder_gate_score.tolist(), self.sub_decoder)]
-        decoded_targets = self.decoder( sum(sub_hiddens) )
+        print('sub hidden', sub_hiddens.shape)
+        # decoded_targets = self.decoder( sum(sub_hiddens) )
+        decoded_targets = self.decoder( sub_hiddens )
         shift_logits = decoded_targets[..., :-1, :].contiguous()
         return shift_logits, decoder_gate_score
     # === Compute loss given joined responses ===
