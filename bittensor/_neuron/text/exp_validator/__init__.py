@@ -334,8 +334,9 @@ class neuron:
                     interested_uids[i] = self.nucleus.test_servers_name[uid]
                 else:
                     interested_uids[i] = str(uid)
-
-            for i, uid in enumerate(routing_uids.tolist()):
+            
+            routing_uids = routing_uids.tolist()
+            for i, uid in enumerate(routing_uids):
                 if uid in self.nucleus.target_uids:
                     routing_uids[i] = self.nucleus.test_servers_name[uid]
                 else:
