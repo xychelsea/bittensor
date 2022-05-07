@@ -749,7 +749,7 @@ class nucleus( torch.nn.Module ):
                 if uid in self.target_uids:
                     gate = self.target_uids.tolist().index(uid)
                 else:
-                    gate = self.num_sub_decoder
+                    gate = self.num_sub_decoder -1 
                 logits, decoder_gate_score = self.get_logits(r, gate = gate)
                 return i, logits, decoder_gate_score
             else:
