@@ -694,7 +694,8 @@ class nucleus( torch.nn.Module ):
         # routing_weights: (torch.FloatTensor): normalized weights across batch dimension with noise.
         # routing_weights.shape = [ n_filtered ]
         # batchwise_routing_weights = torch.mean(routing_weights, axis = 0)[:metagraph.n]
-        batchwise_routing_weights = self.gate_relu(routing_weights)      
+        # batchwise_routing_weights = self.gate_relu(routing_weights)      
+        batchwise_routing_weights = routing_weights      
         noisy_routing_weights = torch.normal( 0, 1, size=( batchwise_routing_weights.size())).to( self.config.neuron.device )
         
         if self.config.nucleus.use_topk:
