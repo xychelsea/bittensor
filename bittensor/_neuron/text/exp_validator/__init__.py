@@ -797,7 +797,7 @@ class nucleus( torch.nn.Module ):
             
         print (f'Time\t|\t{time.time() - start_time}'); start_time = time.time()
         print ('Loss\t|\t{}'.format( target_loss.item() ))
-        print ('Penalty\t|\t{}'.format( self.penalty.item()/10 ))
+        # print ('Penalty\t|\t{}'.format( self.penalty.item()/10 ))
 
         # === Compute Importance loss ===
         # Computes the importance loss based on the stardard error of batchwise_routing_weights
