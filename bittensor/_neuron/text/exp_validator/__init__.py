@@ -786,7 +786,7 @@ class nucleus( torch.nn.Module ):
                         df = pd.DataFrame( decoder_gate_score.detach() ).T
                         df['uid'] = routing_uids[i].item()
                         dfs.append(df)
-                    print('got logit', i, routing_uids[i].item(), round(self.gates[routing_index][i].detach().item(), 4), round(single_loss, 4))
+                    print('got logit', i, routing_uids[i].item(), round(self.gates[routing_index][i].detach().item(), 4), round(single_loss.item(), 4))
 
             df = pd.concat(dfs, ignore_index=True)
             if not os.path.exists (self.result_path + 'decoder_gate_score.csv'):
