@@ -599,12 +599,11 @@ class nucleus( torch.nn.Module ):
         src_mask = torch.triu(torch.ones(hidden.size(1), hidden.size(1)) * float('-inf'), diagonal=1)
         src_mask = src_mask.to(self.config.neuron.device)
         encoded_hidden = self.encoder( hidden, mask = src_mask )
-        decoder_gate_score = F.softmax(torch.mean(torch.mean(self.decoder_gate(encoded_hidden), axis = 0), axis = 0))
+        decoder_gate_score = F.softmax(torch.mean(torch.mean(self.decoder_gate(encoded_hidden), axis = 0), axis = 0), dim=0)
         
         # self.penalty += self.decoder_gate_penalty(decoder_gate_score, torch.zeros_like(decoder_gate_score))
         sub_hiddens = [score * sub_decoder(encoded_hidden) for score, sub_decoder in zip(decoder_gate_score.tolist(), self.sub_decoder)]
         decoded_targets = self.decoder( sum(sub_hiddens) )
-        decoded_targets = self.decoder( sub_hiddens )
         shift_logits = decoded_targets[..., :-1, :].contiguous()
         return shift_logits, decoder_gate_score
     # === Compute loss given joined responses ===
