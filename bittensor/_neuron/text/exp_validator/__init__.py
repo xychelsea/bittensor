@@ -779,7 +779,7 @@ class nucleus( torch.nn.Module ):
                     if logit != None: 
                         single_loss = self.get_target_loss_from_logit(logit, inputs)
                     else:
-                        single_loss = self.get_target_loss_from_logit(logit, inputs)
+                        single_loss = None
                     losses.append(single_loss)
 
                     if decoder_gate_score != None:
