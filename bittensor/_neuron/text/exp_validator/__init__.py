@@ -331,15 +331,15 @@ class neuron:
             interested_uids = self.nucleus.interested_uids.tolist() 
             for i, uid in enumerate(interested_uids):
                 if uid in self.nucleus.target_uids:
-                    interested_uids[i] = self.nucleus.test_servers_name[uid]
+                    interested_uids[i] = self.nucleus.test_servers_name[uid.item()]
                 else:
-                    interested_uids[i] = str(uid)
+                    interested_uids[i] = str(uid.item())
 
             for i, uid in enumerate(routing_uids):
                 if uid in self.nucleus.target_uids:
-                    routing_uids[i] = self.nucleus.test_servers_name[uid]
+                    routing_uids[i] = self.nucleus.test_servers_name[uid.item()]
                 else:
-                    routing_uids[i] = str(uid)
+                    routing_uids[i] = str(uid.item())
 
 
             wandb_data = dict(('w_' + uid, p.item()) for uid, p in zip(interested_uids, self.nucleus.gates.detach()))
@@ -596,11 +596,9 @@ class nucleus( torch.nn.Module ):
         src_mask = torch.triu(torch.ones(hidden.size(1), hidden.size(1)) * float('-inf'), diagonal=1)
         src_mask = src_mask.to(self.config.neuron.device)
         encoded_hidden = self.encoder( hidden, mask = src_mask )
-        print('encoded hidden', encoded_hidden.shape)
         decoder_gate_score = torch.mean(torch.mean(self.decoder_gate(encoded_hidden), axis = 0), axis = 0)
         self.penalty += self.decoder_gate_penalty(decoder_gate_score, torch.zeros_like(decoder_gate_score))
         sub_hiddens = self.sub_decoder[gate](encoded_hidden)# [score * sub_decoder(encoded_hidden) for score, sub_decoder in zip(decoder_gate_score.tolist(), self.sub_decoder)]
-        print('sub hidden', sub_hiddens.shape)
         # decoded_targets = self.decoder( sum(sub_hiddens) )
         decoded_targets = self.decoder( sub_hiddens )
         shift_logits = decoded_targets[..., :-1, :].contiguous()
@@ -775,7 +773,6 @@ class nucleus( torch.nn.Module ):
                 for i, logit, decoder_gate_score in executor.map(map_logits, list(zip(range(len(return_ops)), return_ops.tolist(), query_responses, routing_uids) ) ):
                     logits.append(logit)
                     if logit != None: 
-                        print(logit.shape)
                         losses.append(self.get_target_loss_from_logit(logit, inputs))
                     else:
                         losses.append(None)
