@@ -532,15 +532,15 @@ class nucleus( torch.nn.Module ):
             self.interested_uids = self.target_uids
 
         self.test_servers_name = {
-            26:	'gpt2',
-            34:	'gpt2-medium_1',        
-            42: 'gp2-large_1',
+            26:	'gpt2/gpt2',
+            34:	'gpt2/medium_1',        
+            42: 'gp2/large_1',
             386: 'bert-base-uncased',
-            1702:	'gp2-large_2',
-            1697:	'xlnet-base-cased',
-            1706:	'gpt2-medium_2',
+            1702:	'gp2/large_2',
+            1697:	'xlnet/base-cased',
+            1706:	'gpt2/medium_2',
             1701:	'EleutherAI/gpt-neo-125M',
-            1703:	'xlnet-large-cased',
+            1703:	'xlnet/large-cased',
             1705:	'microsoft/DialoGPT-large',
             1704:	'microsoft/deberta-v3-large',
             1707:	'EleutherAI/gpt-neo-1.3B_1',
