@@ -344,14 +344,13 @@ class neuron:
                     routing_uids[i] = str(uid)
 
 
-            wandb_data = dict(('w_' + uid, p.item()) for uid, p in zip(interested_uids, self.nucleus.gates.detach()))
-            wandb.log( wandb_data , step = self.global_step )
+            weight_data = dict(('w_' + uid, p.item()) for uid, p in zip(interested_uids, self.nucleus.gates.detach()))
 
-            wandb_data = dict(('l_' + uid, p.item() if p else None) for uid, p in zip(routing_uids, losses))
-            wandb.log( wandb_data , step = self.global_step )
+            loss_data = dict(('l_' + uid, p.item() if p else None) for uid, p in zip(routing_uids, losses))
 
-            wandb.log( {'loss': loss} , step = self.global_step)
-            wandb.log( { 'decoder_gate_score': wandb.Table( dataframe = forward_results.decoder_gate_score ) }, step = self.global_step )
+            sum_loss_data = {'loss': loss}
+            decoder_gate_data = { 'decoder_gate_score': wandb.Table( dataframe = forward_results.decoder_gate_score ) }
+            wandb.log( {**weight_data, **loss_data, **sum_loss_data, **decoder_gate_data}, step = self.global_step )
 
 
             # df = pd.DataFrame( scores ).T
