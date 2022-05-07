@@ -315,7 +315,7 @@ class neuron:
             # and endpoint scores using shapely approximation of salience.
             forward_results = self.forward_thread_queue.get()
             print(f'Run\t| Got forward result in {round(time.time() - start_time, 3)}')
-            loss, _, uids, batchwise_routing_weights = forward_results.loss, None, forward_results.routing_uids, forward_results.batchwise_routing_weights
+            loss, _, routing_uids, batchwise_routing_weights, losses = forward_results.loss, None, forward_results.routing_uids, forward_results.batchwise_routing_weights, forward_results.losses
 
 
             df = pd.DataFrame( batchwise_routing_weights.detach() ).T
@@ -328,6 +328,30 @@ class neuron:
                 df.to_csv(self.result_path + 'routing_weight.csv', mode = 'a', header = False)
             print('updated routing weight csv')
             
+            interested_uids = self.nucleus.interested_uids.tolist() 
+            for i, uid in enumerate(interested_uids):
+                if uid in self.nucleus.target_uids:
+                    interested_uids[i] = self.nucleus.test_servers_name[uid]
+                else:
+                    interested_uids[i] = str(uid)
+
+            for i, uid in enumerate(routing_uids):
+                if uid in self.nucleus.target_uids:
+                    routing_uids[i] = self.nucleus.test_servers_name[uid]
+                else:
+                    routing_uids[i] = str(uid)
+
+
+            wandb_data = dict(('w_' + uid, p.item()) for uid, p in zip(interested_uids, self.nucleus.gates.detach()))
+            wandb.log( wandb_data , step = self.global_step )
+
+            wandb_data = dict(('l_' + uid, p.item()) for uid, p in zip(routing_uids, losses.detach()))
+            wandb.log( wandb_data , step = self.global_step )
+
+            wandb.log( {'loss': loss} , step = self.global_step)
+            wandb.log( { 'decoder_gate_score': wandb.Table( dataframe = forward_results.decoder_gate_score ) }, step = self.global_step )
+
+
             # df = pd.DataFrame( scores ).T
             # df.columns = uids.tolist()
             # df['block'] = self.subtensor.block
@@ -376,16 +400,6 @@ class neuron:
                 # === Get another round of forward requests ===
                 self.forward_thread_queue.resume()
                 
-                df = pd.DataFrame( self.nucleus.gates.detach() ).T
-                df.columns = self.nucleus.interested_uids.tolist()
-                df['block'] = self.subtensor.block
-                df = pd.concat([self.header, df])
-                if not os.path.exists (self.result_path + 'gate_score.csv'):
-                    df.to_csv(self.result_path + 'gate_score.csv')
-                else:
-                    df.to_csv(self.result_path + 'gate_score.csv', mode = 'a', header = False)
-
-                print('updated gate score csv')
                 
         # Iterate epochs.
         self.epoch += 1
@@ -403,19 +417,7 @@ class neuron:
         #     wallet = self.wallet,
         #     wait_for_finalization = self.config.neuron.wait_for_finalization,
         # )
-
         
-        df = pd.DataFrame( self.moving_avg_scores[self.nucleus.interested_uids] ).T
-        df.columns = self.nucleus.interested_uids.tolist()
-        df['block'] = self.subtensor.block
-        df = pd.concat([self.header, df])
-        if not os.path.exists (self.result_path + 'moving_average_score.csv'):
-            df.to_csv(self.result_path + 'moving_average_score.csv')
-        else:
-            df.to_csv(self.result_path + 'moving_average_score.csv', mode = 'a', header = False)
-
-        print('updated moving average score csv')
-	
 
         # === Wandb Logs ===
         # Optionally send validator logs to wandb.
@@ -527,6 +529,22 @@ class nucleus( torch.nn.Module ):
         else:
             self.interested_uids = self.target_uids
 
+        self.test_servers_name = {
+            26:	'gpt2',
+            34:	'gpt2-medium_1',        
+            42: 'gp2-large_1',
+            386: 'bert-base-uncased',
+            1702:	'gp2-large_2',
+            1697:	'xlnet-base-cased',
+            1706:	'gpt2-medium_2',
+            1701:	'EleutherAI/gpt-neo-125M',
+            1703:	'xlnet-large-cased',
+            1705:	'microsoft/DialoGPT-large',
+            1704:	'microsoft/deberta-v3-large',
+            1707:	'EleutherAI/gpt-neo-1.3B_1',
+            1708:	'EleutherAI/gpt-neo-1.3B_2'
+        }
+
 
     @classmethod
     def add_args( cls, parser ):
@@ -570,7 +588,7 @@ class nucleus( torch.nn.Module ):
         self.encoder.apply( init_xavier )
         # torch.nn.init.xavier_uniform_( self.gates.weight )
 
-    def get_logits (self, hidden):
+    def get_logits (self, hidden, gate = 0):
         # hidden: (torch.float64): [ batch_size, sequence_len, __network_dim__ ]
         #   Hidden units which are encoded and decoded onto targets for loss computation.
         # targets: (torch.float64): [n]
@@ -580,7 +598,7 @@ class nucleus( torch.nn.Module ):
         encoded_hidden = self.encoder( hidden, mask = src_mask )
         decoder_gate_score = torch.mean(torch.mean(self.decoder_gate(encoded_hidden), axis = 0), axis = 0)
         self.penalty += self.decoder_gate_penalty(decoder_gate_score, torch.zeros_like(decoder_gate_score))
-        sub_hiddens = [score * sub_decoder(encoded_hidden) for score, sub_decoder in zip(decoder_gate_score.tolist(), self.sub_decoder)]
+        sub_hiddens = decoder_gate_score.tolist()[gate](encoded_hidden)# [score * sub_decoder(encoded_hidden) for score, sub_decoder in zip(decoder_gate_score.tolist(), self.sub_decoder)]
         decoded_targets = self.decoder( sum(sub_hiddens) )
         shift_logits = decoded_targets[..., :-1, :].contiguous()
         return shift_logits, decoder_gate_score
@@ -726,9 +744,13 @@ class nucleus( torch.nn.Module ):
             response.to( self.device )
 
         def map_logits(arg):
-            i, ops, r = arg
+            i, ops, r , uid= arg
             if ops == bittensor.proto.ReturnCode.Success:
-                logits, decoder_gate_score = self.get_logits(r)
+                if uid in self.target_uids:
+                    gate = self.target_uids.tolist().index(uid)
+                else:
+                    gate = self.num_sub_decoder
+                logits, decoder_gate_score = self.get_logits(r, gate = gate)
                 return i, logits, decoder_gate_score
             else:
                 return i, None, None
@@ -744,10 +766,12 @@ class nucleus( torch.nn.Module ):
 
         else:
             logits = []
+            losses = []
             dfs = []
             with ThreadPoolExecutor(max_workers=self.config.nucleus.num_workers) as executor:
-                for i, logit, decoder_gate_score in executor.map(map_logits, list(zip(range(len(return_ops)), return_ops.tolist(), query_responses) ) ):
+                for i, logit, decoder_gate_score in executor.map(map_logits, list(zip(range(len(return_ops)), return_ops.tolist(), query_responses, routing_uids) ) ):
                     logits.append(logit)
+                    losses.append(self.get_target_loss_from_logit(logit, inputs))
                     
                     if decoder_gate_score != None:
                         df = pd.DataFrame( decoder_gate_score.detach() ).T
@@ -786,7 +810,9 @@ class nucleus( torch.nn.Module ):
             return_ops = return_ops,
             # responses_hidden = responses_hidden,
             loss = loss,
-            n = metagraph.n.item()
+            n = metagraph.n.item(),
+            decoder_gate_score = df,
+            losses = losses
         )
         
         print('returning state_dict')
