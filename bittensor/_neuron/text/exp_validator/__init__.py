@@ -774,15 +774,16 @@ class nucleus( torch.nn.Module ):
                 for i, logit, decoder_gate_score in executor.map(map_logits, list(zip(range(len(return_ops)), return_ops.tolist(), query_responses, routing_uids) ) ):
                     logits.append(logit)
                     if logit != None: 
-                        losses.append(self.get_target_loss_from_logit(logit, inputs))
+                        single_loss = self.get_target_loss_from_logit(logit, inputs)
                     else:
-                        losses.append(None)
+                        single_loss = self.get_target_loss_from_logit(logit, inputs)
+                    losses.append(single_loss)
 
                     if decoder_gate_score != None:
                         df = pd.DataFrame( decoder_gate_score.detach() ).T
                         df['uid'] = routing_uids[i].item()
                         dfs.append(df)
-                    print('got logit', i, routing_uids[i], self.gates[routing_index][i].detach().item())
+                    print('got logit', i, routing_uids[i].item(), round(self.gates[routing_index][i].detach().item(), 4), round(single_loss, 4))
 
             df = pd.concat(dfs, ignore_index=True)
             if not os.path.exists (self.result_path + 'decoder_gate_score.csv'):
