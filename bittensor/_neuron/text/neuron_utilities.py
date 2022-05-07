@@ -139,7 +139,7 @@ def joining_logits(return_ops, topk_weights, logits):
     
     """
     joining_uids = torch.where( return_ops == bittensor.proto.ReturnCode.Success )[0]
-    joining_weights = F.softmax( topk_weights[(return_ops == bittensor.proto.ReturnCode.Success)], dim = 0 ) 
+    joining_weights = topk_weights[(return_ops == bittensor.proto.ReturnCode.Success)]
     output = None
     for index, joining_weight in enumerate( joining_weights ):
         if output == None:
