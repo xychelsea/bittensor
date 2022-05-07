@@ -349,7 +349,7 @@ class neuron:
             sum_loss_data = {'total_loss': loss.detach().item()}
             decoder_gate_data = { 'decoder_gate_score': wandb.Table( dataframe = forward_results.decoder_gate_score ) }
             print(self.global_step, {**weight_data, **loss_data, **sum_loss_data})
-            wandb.log( {**weight_data, **loss_data, **sum_loss_data, **decoder_gate_data}, step = self.global_step )
+            wandb.log( {**weight_data, **loss_data, **sum_loss_data}, step = self.global_step )
 
 
             # df = pd.DataFrame( scores ).T
