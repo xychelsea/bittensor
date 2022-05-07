@@ -346,7 +346,7 @@ class neuron:
             wandb_data = dict(('w_' + uid, p.item()) for uid, p in zip(interested_uids, self.nucleus.gates.detach()))
             wandb.log( wandb_data , step = self.global_step )
 
-            wandb_data = dict(('l_' + uid, p.item()) for uid, p in zip(routing_uids, losses))
+            wandb_data = dict(('l_' + uid, p.item() if p else None) for uid, p in zip(routing_uids, losses))
             wandb.log( wandb_data , step = self.global_step )
 
             wandb.log( {'loss': loss} , step = self.global_step)
