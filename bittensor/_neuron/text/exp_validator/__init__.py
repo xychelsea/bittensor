@@ -331,15 +331,15 @@ class neuron:
             interested_uids = self.nucleus.interested_uids.tolist() 
             for i, uid in enumerate(interested_uids):
                 if uid in self.nucleus.target_uids:
-                    interested_uids[i] = self.nucleus.test_servers_name[uid.item()]
+                    interested_uids[i] = self.nucleus.test_servers_name[uid]
                 else:
-                    interested_uids[i] = str(uid.item())
+                    interested_uids[i] = str(uid)
 
-            for i, uid in enumerate(routing_uids):
+            for i, uid in enumerate(routing_uids.tolist()):
                 if uid in self.nucleus.target_uids:
-                    routing_uids[i] = self.nucleus.test_servers_name[uid.item()]
+                    routing_uids[i] = self.nucleus.test_servers_name[uid]
                 else:
-                    routing_uids[i] = str(uid.item())
+                    routing_uids[i] = str(uid)
 
 
             wandb_data = dict(('w_' + uid, p.item()) for uid, p in zip(interested_uids, self.nucleus.gates.detach()))
