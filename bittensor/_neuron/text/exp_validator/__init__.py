@@ -523,7 +523,9 @@ class nucleus( torch.nn.Module ):
         # self.gates = torch.nn.Linear( bittensor.__network_dim__, 13 + self.num_others, bias=True ).to( self.device )
         self.gates = torch.nn.parameter.Parameter(torch.ones(13+self.num_others))
         self.gate_relu = nn.ReLU()
+        self.global_step = 0
         self.reset_weights()
+
         
         self.target_uids = torch.tensor([26,34,42,386,1697,1701,1702,1703,1704,1705,1706,1707,1708])
         self.random_uids = torch.tensor(list(range(2000, 2000 + self.num_others)))
@@ -600,8 +602,7 @@ class nucleus( torch.nn.Module ):
         src_mask = src_mask.to(self.config.neuron.device)
         encoded_hidden = self.encoder( hidden, mask = src_mask )
         decoder_gate_score = F.softmax(torch.mean(torch.mean(self.decoder_gate(encoded_hidden), axis = 0), axis = 0), dim=0)
-        
-        # self.penalty += self.decoder_gate_penalty(decoder_gate_score, torch.zeros_like(decoder_gate_score))
+        self.penalty += self.decoder_gate_penalty(decoder_gate_score, torch.zeros_like(decoder_gate_score))
         sub_hiddens = [score * sub_decoder(encoded_hidden) for score, sub_decoder in zip(decoder_gate_score.tolist(), self.sub_decoder)]
         decoded_targets = self.decoder( sum(sub_hiddens) )
         shift_logits = decoded_targets[..., :-1, :].contiguous()
@@ -807,8 +808,9 @@ class nucleus( torch.nn.Module ):
         # target_loss: (torch.float64): the total loss (global training loss + importance loss)
         # target_loss.shape = [ 1 ]
         importance_loss = self.config.nucleus.importance  * (torch.std(batchwise_routing_weights)/torch.mean(batchwise_routing_weights))**2
-        loss = target_loss # + self.penalty/10 #  + importance_loss
+        loss = target_loss + (self.penalty/10) * 0.98**( self.global_step % 50) #  + importance_loss
         self.penalty = 0
+        self.global_step += 1
           
         state_dict = SimpleNamespace(
             inputs = inputs,
