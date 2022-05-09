@@ -346,7 +346,7 @@ class neuron:
 
             weight_data = dict(('routing_weight/' + uid, p.item()) for uid, p in zip(interested_uids, self.nucleus.gates.detach()))
             loss_data = dict(('loss/' + uid, p.item()) for uid, p in zip(routing_uids, losses) if p)
-            sum_loss_data = {'total_loss': loss.detach().item()}
+            sum_loss_data = {'total_loss': loss.detach().item(), 'penalty': forward_results.penalty}
             print(self.global_step, {**weight_data, **loss_data, **sum_loss_data})
             wandb.log( {**weight_data, **loss_data, **sum_loss_data}, step = self.global_step )
 
@@ -776,7 +776,7 @@ class nucleus( torch.nn.Module ):
             
         print (f'Time\t|\t{time.time() - start_time}'); start_time = time.time()
         print ('Loss\t|\t{}'.format( target_loss.item() ))
-        print ('Penalty\t|\t{}'.format( self.penalty.item()/10 ))
+        print ('Penalty\t|\t{}'.format( (self.penalty/10) * self.config.nucleus.penalty_decay_factor**( self.global_step % self.penalty_reset_time) ))
 
         # === Compute Importance loss ===
         # Computes the importance loss based on the stardard error of batchwise_routing_weights
@@ -786,6 +786,7 @@ class nucleus( torch.nn.Module ):
         # target_loss.shape = [ 1 ]
         importance_loss = self.config.nucleus.importance  * (torch.std(batchwise_routing_weights)/torch.mean(batchwise_routing_weights))**2
         loss = target_loss + (self.penalty/10) * self.config.nucleus.penalty_decay_factor**( self.global_step % self.penalty_reset_time) #  + importance_loss
+        penalty = (self.penalty/10) * self.config.nucleus.penalty_decay_factor**( self.global_step % self.penalty_reset_time)
         self.penalty = 0
         self.global_step += 1
           
@@ -800,7 +801,8 @@ class nucleus( torch.nn.Module ):
             loss = loss,
             n = metagraph.n.item(),
             decoder_gate_score = df,
-            losses = losses
+            losses = losses,
+            penalty = penalty
         )
         
         print('returning state_dict')
