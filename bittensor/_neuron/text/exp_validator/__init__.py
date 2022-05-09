@@ -329,7 +329,6 @@ class neuron:
                 df.to_csv(self.result_path + 'routing_weight.csv', mode = 'a', header = False)
             print('updated routing weight csv')
             
-
             interested_uids = self.nucleus.interested_uids.tolist() 
             for i, uid in enumerate(interested_uids):
                 if uid in self.nucleus.target_uids:
@@ -778,7 +777,7 @@ class nucleus( torch.nn.Module ):
                         else:
                             df.to_csv(self.result_path + 'decoder_gate_score.csv', mode = 'a', header = False)
 
-                    print('got logit', i, routing_uids[i])
+                    print('got logit', i, routing_uids[i].item(), round(self.gates[routing_index][i].detach().item(), 4))
 
             joint_logits, uids = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
             print('joint logits')
