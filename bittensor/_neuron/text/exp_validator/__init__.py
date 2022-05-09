@@ -272,7 +272,8 @@ class neuron:
         print ( '\nEra:', '\n\t batch_size:', batch_size, '\n\t sequence_length:', sequence_length, '\n\t n_topk_peer_weights:', n_topk_peer_weights,
                 '\n\t max_allowed_ratio:', max_allowed_ratio, '\n\t blocks_per_epoch:', blocks_per_epoch, '\n\t epochs_until_reset:', epochs_until_reset, 
                 '\n\t until_reset:', self.epoch % epochs_until_reset, '\n\t current_block:', current_block, '\n')
-        if self.config.using_wandb:
+        # if self.config.using_wandb:
+        if False:
             wandb.log( {    'era/batch_size': batch_size, 'era/sequence_length': sequence_length, 'era/n_topk_peer_weights': n_topk_peer_weights, 
                             'era/max_allowed_ratio': max_allowed_ratio, 'era/blocks_per_epoch': blocks_per_epoch, 'era/epochs_until_reset': epochs_until_reset, 
                 }, step = current_block )
@@ -328,6 +329,28 @@ class neuron:
                 df.to_csv(self.result_path + 'routing_weight.csv', mode = 'a', header = False)
             print('updated routing weight csv')
             
+
+            interested_uids = self.nucleus.interested_uids.tolist() 
+            for i, uid in enumerate(interested_uids):
+                if uid in self.nucleus.target_uids:
+                    interested_uids[i] = self.nucleus.test_servers_name[uid]
+                else:
+                    interested_uids[i] = str(uid)
+            
+            routing_uids = routing_uids.tolist()
+            for i, uid in enumerate(routing_uids):
+                if uid in self.nucleus.target_uids:
+                    routing_uids[i] = self.nucleus.test_servers_name[uid]
+                else:
+                    routing_uids[i] = str(uid)
+
+
+            weight_data = dict(('routing_weight/' + uid, p.item()) for uid, p in zip(interested_uids, self.nucleus.gates.detach()))
+            sum_loss_data = {'total_loss': loss.detach().item()}
+            print(self.global_step, {**weight_data, **sum_loss_data})
+            wandb.log( {**weight_data, **sum_loss_data}, step = self.global_step )
+
+
             df = pd.DataFrame( scores ).T
             df.columns = uids.tolist()
             df['block'] = self.subtensor.block
@@ -354,7 +377,8 @@ class neuron:
             # === Logs ===
             print( '\nStep:', '\n\t epoch:', self.epoch, '\n\t epoch_steps:', epoch_steps, '\n\t global_steps:', self.global_step, '\n\t step_time:', step_time, '\n\t loss:', loss.item(),
                    '\n\t current_block', current_block, '\n\t blocks remaining:', current_block - start_block, '/', blocks_per_epoch, '\n')
-            if self.config.using_wandb:
+            # if self.config.using_wandb:
+            if False:
                 wandb.log( { 'epoch/epoch': self.epoch, 'epoch/epoch_steps': epoch_steps, 'epoch/global_steps': self.global_step, 'epoch/loss': loss.item(), 'epoch/time': step_time }, step = current_block )
                 step_topk_scores, step_topk_uids = bittensor.unbiased_topk( self.moving_avg_scores, k = n_topk_peer_weights )
                 step_topk_normalized = bittensor.utils.weight_utils.normalize_max_multiple( x = step_topk_scores, multiple = max_allowed_ratio )
@@ -417,7 +441,8 @@ class neuron:
 
         # === Wandb Logs ===
         # Optionally send validator logs to wandb.
-        if self.config.using_wandb:
+        # if self.config.using_wandb:
+        if False:
             # Logging history to wandb.
             df = pandas.concat( [
                 bittensor.utils.indexed_values_to_dataframe( prefix = 'weights', index = topk_uids, values = torch.zeros( self.metagraph.n ).scatter( dim = 0, src = topk_scores, index = topk_uids ) ),
@@ -481,11 +506,8 @@ class nucleus( torch.nn.Module ):
         self.config = config
         self.device = device
         self.max_n = subtensor.max_n
-        self.num_sub_decoder = 20
-        if self.config.nucleus.include_random:
-            self.num_random = self.config.nucleus.num_random
-        else:
-            self.num_random = 0
+        self.num_sub_decoder = self.config.nucleus.num_sub_decoder
+        self.num_others = self.config.nucleus.num_others
 
         # Token embeddings project int64 tokens onto representations.
         self.token_embedding = torch.nn.Embedding( bittensor.__vocab_size__,  bittensor.__network_dim__ )
@@ -502,7 +524,8 @@ class nucleus( torch.nn.Module ):
         self.decoder_gate = torch.nn.Linear( bittensor.__network_dim__, self.num_sub_decoder , bias=False)
         self.decoder_gate_penalty = torch.nn.L1Loss(reduction='mean')
         self.penalty = 0
-        self.sub_decoder = [torch.nn.Linear( bittensor.__network_dim__, 512, bias=False ).to( self.device ) for _ in range(self.num_sub_decoder)]
+        sub_decoder = [torch.nn.Linear( bittensor.__network_dim__, 512, bias=False ).to( self.device ) for _ in range(self.num_sub_decoder)]
+        self.sub_decoder = nn.ModuleList(sub_decoder)
         self.decoder = torch.nn.Linear( 512, bittensor.__vocab_size__ , bias=False)
 
         # Positional Encoding
@@ -522,7 +545,7 @@ class nucleus( torch.nn.Module ):
         
         self.target_uids = torch.tensor([26,34,42,386,1697,1701,1702,1703,1704,1705,1706,1707,1708])
         self.random_uids = torch.tensor(list(range(2000, 2000 + self.num_random)))
-        if self.config.nucleus.include_random == True:
+        if self.config.nucleus.num_others > 0:
             self.interested_uids = torch.concat([self.target_uids, self.random_uids])
         else:
             self.interested_uids = self.target_uids
@@ -537,10 +560,13 @@ class nucleus( torch.nn.Module ):
         parser.add_argument('--nucleus.dropout', type=float, help='the dropout value', default=0.2)
         parser.add_argument('--nucleus.importance', type=float, help='hyperparameter for the importance loss', default=3)
         parser.add_argument('--nucleus.noise_multiplier', type=float, help='Standard deviation multipler on weights', default=2 )
-        parser.add_argument('--nucleus.include_random', action='store_true', help='', default=False )
-        parser.add_argument('--nucleus.num_random', type=int, help='', default=24 )
+        parser.add_argument('--nucleus.num_sub_decoder', type=int, help='', default=20 )
+        parser.add_argument('--nucleus.num_others', type=int, help='', default=24 )
+        parser.add_argument('--nucleus.num_random', type=int, help='', default=12 )
         parser.add_argument('--nucleus.join_logits', action='store_true', help='', default=False )
         parser.add_argument('--nucleus.use_topk', action='store_true', help='', default=False )
+        parser.add_argument('--nucleus.num_workers', type=int, help='', default=4 )
+        parser.add_argument('--nucleus.penalty_decay_factor', type=float, help='', default=0.99 )
 
     @classmethod
     def config ( cls ):
@@ -558,7 +584,7 @@ class nucleus( torch.nn.Module ):
         # === Resets all the weights using xavier initialization. ===
         torch.nn.init.xavier_uniform_ ( self.token_embedding.weight )
         torch.nn.init.xavier_uniform_ ( self.decoder.weight )
-        torch.nn.init.constant_( self.gates, 1/(13+self.num_random) )
+        torch.nn.init.constant_ ( self.gates, 1/(13 + self.num_others) )
         def init_xavier( component ):
             try:
                 torch.nn.init.xavier_uniform_( component.weight )
@@ -710,7 +736,7 @@ class nucleus( torch.nn.Module ):
         query_responses = list(query_responses)
         return_ops = list(return_ops)
         for i, (r, uid) in enumerate (zip(query_responses, routing_uids)):
-            if uid not in self.target_uids and uid < 2100:
+            if uid not in self.target_uids and uid < 2000 + self.config.nucleus.num_random:
                 return_ops[i] = bittensor.proto.ReturnCode.Success
                 query_responses[i] = torch.rand(r.shape)
 
@@ -740,7 +766,7 @@ class nucleus( torch.nn.Module ):
 
         else:
             logits = []
-            with ThreadPoolExecutor(max_workers=4) as executor:
+            with ThreadPoolExecutor(max_workers=self.config.nucleus.num_workers) as executor:
                 for i, logit, decoder_gate_score in executor.map(map_logits, list(zip(range(len(return_ops)), return_ops.tolist(), query_responses) ) ):
                     logits.append(logit)
                     
