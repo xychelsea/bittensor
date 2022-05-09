@@ -633,6 +633,7 @@ class nucleus( torch.nn.Module ):
                 scores (torch.FloatTensor, [ metagraph.n ]):
                     Scores per endpoint for this batch.
         """        
+        start_time = time.time()
         # === Create the local context used to select endpoints ===
         # The context tensor returns a hidden unit representation for the text inputs
         # this context can be used as input to the gates in the next step.
@@ -711,7 +712,7 @@ class nucleus( torch.nn.Module ):
             inputs = inputs,
             timeout = 14
         )
-        print('forward_text finished')
+        print(f'forward_text finished {time.time() - start_time}'); start_time = time.time()
 
         query_responses = list(query_responses)
         return_ops = list(return_ops)
@@ -771,6 +772,7 @@ class nucleus( torch.nn.Module ):
             joint_logits, uids = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
             target_loss = self.get_target_loss_from_logit(joint_logits, inputs) 
             
+        print (f'Time\t|\t{time.time() - start_time}'); start_time = time.time()
         print ('Loss\t|\t{}'.format( target_loss.item() ))
         print ('Penalty\t|\t{}'.format( self.penalty.item()/10 ))
 
