@@ -316,7 +316,7 @@ class neuron:
             # and endpoint scores using shapely approximation of salience.
             forward_results = self.forward_thread_queue.get()
             print(f'Run\t| Got forward result in {round(time.time() - start_time, 3)}')
-            loss, scores, uids, batchwise_routing_weights = self.nucleus.compute_shapely_scores(forward_results)
+            loss, scores, routing_uids, batchwise_routing_weights = self.nucleus.compute_shapely_scores(forward_results)
 
 
             df = pd.DataFrame( batchwise_routing_weights.detach() ).T
@@ -351,7 +351,7 @@ class neuron:
 
 
             df = pd.DataFrame( scores ).T
-            df.columns = uids.tolist()
+            df.columns = routing_uids.tolist()
             df['block'] = self.subtensor.block
 
             df = pd.concat([self.header, df])
@@ -364,7 +364,7 @@ class neuron:
 
             # === Scoring ===
             # Updates moving averages and history.
-            self.moving_avg_scores[uids] = self.moving_avg_scores[uids]*(0.99) + scores*(0.01)
+            self.moving_avg_scores[routing_uids] = self.moving_avg_scores[routing_uids]*(0.99) + scores*(0.01)
         
             # === State update ===
             # Prints step logs to screen.
