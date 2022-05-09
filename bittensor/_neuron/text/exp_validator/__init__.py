@@ -490,9 +490,9 @@ class nucleus( torch.nn.Module ):
         self.decoder_gate = torch.nn.Linear( bittensor.__network_dim__, self.num_sub_decoder , bias=False)
         self.decoder_gate_penalty = torch.nn.L1Loss(reduction='mean')
         self.penalty = 0
-        sub_decoder = [torch.nn.Linear( bittensor.__network_dim__, 512, bias=False ).to( self.device ) for _ in range(self.num_sub_decoder)]
+        sub_decoder = [torch.nn.Linear( bittensor.__network_dim__, bittensor.__network_dim__, bias=False ).to( self.device ) for _ in range(self.num_sub_decoder)]
         self.sub_decoder = nn.ModuleList(sub_decoder)
-        self.decoder = torch.nn.Linear( 512, bittensor.__vocab_size__ , bias=False)
+        self.decoder = torch.nn.Linear( bittensor.__network_dim__, bittensor.__vocab_size__ , bias=False)
 
         # Positional Encoding
         self.local_pos_encoder = PositionalEncoding( bittensor.__network_dim__, self.config.nucleus.dropout )
@@ -580,11 +580,13 @@ class nucleus( torch.nn.Module ):
         #   Token targets,
         src_mask = torch.triu(torch.ones(hidden.size(1), hidden.size(1)) * float('-inf'), diagonal=1)
         src_mask = src_mask.to(self.config.neuron.device)
-        encoded_hidden = self.encoder( hidden, mask = src_mask )
-        decoder_gate_score = torch.mean(torch.mean(self.decoder_gate(encoded_hidden), axis = 0), axis = 0)
+        
+        decoder_gate_score = torch.mean(torch.mean(self.decoder_gate(hidden), axis = 0), axis = 0)
         self.penalty += self.decoder_gate_penalty(decoder_gate_score, torch.zeros_like(decoder_gate_score))
         sub_hiddens = [score * sub_decoder(encoded_hidden) for score, sub_decoder in zip(decoder_gate_score.tolist(), self.sub_decoder)]
-        decoded_targets = self.decoder( sum(sub_hiddens) )
+        
+        encoded_hidden = self.encoder( sum(sub_hiddens), mask = src_mask )
+        decoded_targets = self.decoder( encoded_hidden )
         shift_logits = decoded_targets[..., :-1, :].contiguous()
         return shift_logits, decoder_gate_score
     # === Compute loss given joined responses ===
