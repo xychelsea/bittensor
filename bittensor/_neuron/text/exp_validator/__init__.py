@@ -539,12 +539,12 @@ class nucleus( torch.nn.Module ):
 
 
         # self.gates = torch.nn.Linear( bittensor.__network_dim__, 13 + self.num_random, bias=True ).to( self.device )
-        self.gates = torch.nn.parameter.Parameter(torch.ones(13+self.num_random) / (13 + self.num_random))
+        self.gates = torch.nn.parameter.Parameter(torch.ones(13+self.num_others) / (13 + self.num_others))
         self.gate_relu = nn.ReLU()
         self.reset_weights()
         
         self.target_uids = torch.tensor([26,34,42,386,1697,1701,1702,1703,1704,1705,1706,1707,1708])
-        self.random_uids = torch.tensor(list(range(2000, 2000 + self.num_random)))
+        self.random_uids = torch.tensor(list(range(2000, 2000 + self.num_others)))
         if self.config.nucleus.num_others > 0:
             self.interested_uids = torch.concat([self.target_uids, self.random_uids])
         else:
