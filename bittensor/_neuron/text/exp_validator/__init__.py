@@ -524,6 +524,7 @@ class nucleus( torch.nn.Module ):
         self.gates = torch.nn.parameter.Parameter(torch.ones(13+self.num_others))
         self.gate_relu = nn.ReLU()
         self.global_step = 0
+        self.penalty_reset_time = math.log(0.2)/ math.log(self.config.penalty_decay_factor)
         self.reset_weights()
 
         
@@ -566,6 +567,7 @@ class nucleus( torch.nn.Module ):
         parser.add_argument('--nucleus.join_logits', action='store_true', help='', default=False )
         parser.add_argument('--nucleus.use_topk', action='store_true', help='', default=False )
         parser.add_argument('--nucleus.num_workers', type=int, help='', default=4 )
+        parser.add_argument('--nucleus.penalty_decay_factor', type=float, help='', default=0.99 )
 
     @classmethod
     def config ( cls ):
@@ -808,7 +810,7 @@ class nucleus( torch.nn.Module ):
         # target_loss: (torch.float64): the total loss (global training loss + importance loss)
         # target_loss.shape = [ 1 ]
         importance_loss = self.config.nucleus.importance  * (torch.std(batchwise_routing_weights)/torch.mean(batchwise_routing_weights))**2
-        loss = target_loss + (self.penalty/10) * 0.98**( self.global_step % 50) #  + importance_loss
+        loss = target_loss + (self.penalty/10) * self.config.nucleus.penalty_decay_factor**( self.global_step % self.penalty_reset_time) #  + importance_loss
         self.penalty = 0
         self.global_step += 1
           
