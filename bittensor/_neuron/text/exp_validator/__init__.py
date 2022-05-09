@@ -316,7 +316,7 @@ class neuron:
             # and endpoint scores using shapely approximation of salience.
             forward_results = self.forward_thread_queue.get()
             print(f'Run\t| Got forward result in {round(time.time() - start_time, 3)}')
-            loss, scores, routing_uids, batchwise_routing_weights = self.nucleus.compute_shapely_scores(forward_results)
+            loss, _, routing_uids, batchwise_routing_weights, losses = forward_results.loss, None, forward_results.routing_uids, forward_results.batchwise_routing_weights, forward_results.losses
 
 
             df = pd.DataFrame( batchwise_routing_weights.detach() ).T
@@ -345,9 +345,10 @@ class neuron:
 
 
             weight_data = dict(('routing_weight/' + uid, p.item()) for uid, p in zip(interested_uids, self.nucleus.gates.detach()))
+            loss_data = dict(('loss/' + uid, p.item()) for uid, p in zip(routing_uids, losses) if p)
             sum_loss_data = {'total_loss': loss.detach().item()}
-            print(self.global_step, {**weight_data, **sum_loss_data})
-            wandb.log( {**weight_data, **sum_loss_data}, step = self.global_step )
+            print(self.global_step, {**weight_data, **loss_data, **sum_loss_data})
+            wandb.log( {**weight_data, **loss_data, **sum_loss_data}, step = self.global_step )
 
 
 
@@ -673,7 +674,7 @@ class nucleus( torch.nn.Module ):
         # routing_weights: (torch.FloatTensor): normalized weights across batch dimension with noise.
         # routing_weights.shape = [ n_filtered ]
         # batchwise_routing_weights = torch.mean(routing_weights, axis = 0)[:metagraph.n]
-        batchwise_routing_weights = self.gate_relu(routing_weights)      
+        batchwise_routing_weights = routing_weights      
         noisy_routing_weights = torch.normal( 0, 1, size=( batchwise_routing_weights.size())).to( self.config.neuron.device )
         
         if self.config.nucleus.use_topk:
@@ -745,25 +746,31 @@ class nucleus( torch.nn.Module ):
 
         else:
             logits = []
+            losses = []
+            dfs = []
             with ThreadPoolExecutor(max_workers=self.config.nucleus.num_workers) as executor:
                 for i, logit, decoder_gate_score in executor.map(map_logits, list(zip(range(len(return_ops)), return_ops.tolist(), query_responses) ) ):
                     logits.append(logit)
+                    if logit != None: 
+                        single_loss = self.get_target_loss_from_logit(logit, inputs)
+                    else:
+                        single_loss = None
+                    losses.append(single_loss)
                     
                     if decoder_gate_score != None:
                         df = pd.DataFrame( decoder_gate_score.detach() ).T
                         df['uid'] = routing_uids[i].item()
-                        if not os.path.exists (self.result_path + 'decoder_gate_score.csv'):
-                            df.to_csv(self.result_path + 'decoder_gate_score.csv')
-                        else:
-                            df.to_csv(self.result_path + 'decoder_gate_score.csv', mode = 'a', header = False)
+                        dfs.append(df)
+                    print('got logit', i, routing_uids[i].item(), round(self.gates[routing_index][i].detach().item(), 4), round(single_loss.item() if single_loss else 0.0000, 4))
 
-                    print('got logit', i, routing_uids[i].item(), round(self.gates[routing_index][i].detach().item(), 4))
-
+                df = pd.concat(dfs, ignore_index=True)
+                if not os.path.exists (self.result_path + 'decoder_gate_score.csv'):
+                    df.to_csv(self.result_path + 'decoder_gate_score.csv')
+                else:
+                    df.to_csv(self.result_path + 'decoder_gate_score.csv', mode = 'a', header = False)
             joint_logits, uids = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
-            print('joint logits')
             target_loss = self.get_target_loss_from_logit(joint_logits, inputs) 
             
-        print('got loss')
         print ('Loss\t|\t{}'.format( target_loss.item() ))
         print ('Penalty\t|\t{}'.format( self.penalty.item()/10 ))
 
@@ -786,7 +793,9 @@ class nucleus( torch.nn.Module ):
             return_ops = return_ops,
             # responses_hidden = responses_hidden,
             loss = loss,
-            n = metagraph.n.item()
+            n = metagraph.n.item(),
+            decoder_gate_score = df,
+            losses = losses
         )
         
         print('returning state_dict')
