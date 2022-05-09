@@ -583,7 +583,7 @@ class nucleus( torch.nn.Module ):
         
         decoder_gate_score = torch.mean(torch.mean(self.decoder_gate(hidden), axis = 0), axis = 0)
         self.penalty += self.decoder_gate_penalty(decoder_gate_score, torch.zeros_like(decoder_gate_score))
-        sub_hiddens = [score * sub_decoder(encoded_hidden) for score, sub_decoder in zip(decoder_gate_score.tolist(), self.sub_decoder)]
+        sub_hiddens = [score * sub_decoder(hidden) for score, sub_decoder in zip(decoder_gate_score.tolist(), self.sub_decoder)]
         
         encoded_hidden = self.encoder( sum(sub_hiddens), mask = src_mask )
         decoded_targets = self.decoder( encoded_hidden )
