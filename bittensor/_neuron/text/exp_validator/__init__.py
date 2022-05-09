@@ -508,7 +508,7 @@ class nucleus( torch.nn.Module ):
         self.gates = torch.nn.parameter.Parameter(torch.ones(13+self.num_others) / (13 + self.num_others))
         self.gate_relu = nn.ReLU()
         self.global_step = 0
-        self.penalty_reset_time = math.log(0.2)/ math.log(self.config.penalty_decay_factor)
+        self.penalty_reset_time = math.log(0.2)/ math.log(self.config.nucleus.penalty_decay_factor)
         self.reset_weights()
         
         self.target_uids = torch.tensor([26,34,42,386,1697,1701,1702,1703,1704,1705,1706,1707,1708])
