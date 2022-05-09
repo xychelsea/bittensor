@@ -350,21 +350,9 @@ class neuron:
             wandb.log( {**weight_data, **sum_loss_data}, step = self.global_step )
 
 
-            df = pd.DataFrame( scores ).T
-            df.columns = routing_uids
-            df['block'] = self.subtensor.block
-
-            df = pd.concat([self.header, df])
-            if not os.path.exists (self.result_path + 'shapely_scores.csv'):
-                df.to_csv(self.result_path + 'shapely_scores.csv') 
-            else:
-                df.to_csv(self.result_path + 'shapely_scores.csv', mode = 'a', header = False) 
-            print(df)
-            print('updated shapely score csv')
 
             # === Scoring ===
             # Updates moving averages and history.
-            self.moving_avg_scores[routing_uids] = self.moving_avg_scores[routing_uids]*(0.99) + scores*(0.01)
         
             # === State update ===
             # Prints step logs to screen.
@@ -397,16 +385,6 @@ class neuron:
                 # === Get another round of forward requests ===
                 self.forward_thread_queue.resume()
                 
-                df = pd.DataFrame( self.nucleus.gates.detach() ).T
-                df.columns = self.nucleus.interested_uids.tolist()
-                df['block'] = self.subtensor.block
-                df = pd.concat([self.header, df])
-                if not os.path.exists (self.result_path + 'gate_score.csv'):
-                    df.to_csv(self.result_path + 'gate_score.csv')
-                else:
-                    df.to_csv(self.result_path + 'gate_score.csv', mode = 'a', header = False)
-
-                print('updated gate score csv')
                 
         # Iterate epochs.
         self.epoch += 1
@@ -426,18 +404,6 @@ class neuron:
         # )
 
         
-        df = pd.DataFrame( self.moving_avg_scores[self.nucleus.interested_uids] ).T
-        df.columns = self.nucleus.interested_uids.tolist()
-        df['block'] = self.subtensor.block
-        df = pd.concat([self.header, df])
-        if not os.path.exists (self.result_path + 'moving_average_score.csv'):
-            df.to_csv(self.result_path + 'moving_average_score.csv')
-        else:
-            df.to_csv(self.result_path + 'moving_average_score.csv', mode = 'a', header = False)
-
-        print('updated moving average score csv')
-	
-
         # === Wandb Logs ===
         # Optionally send validator logs to wandb.
         # if self.config.using_wandb:
