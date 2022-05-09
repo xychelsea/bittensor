@@ -351,7 +351,7 @@ class neuron:
 
 
             df = pd.DataFrame( scores ).T
-            df.columns = routing_uids.tolist()
+            df.columns = routing_uids
             df['block'] = self.subtensor.block
 
             df = pd.concat([self.header, df])
