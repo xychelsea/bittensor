@@ -9,6 +9,7 @@ from concurrent.futures import Future
 import queue
 from threading import Thread
 from concurrent.futures import ThreadPoolExecutor
+import math
 
 def update_metagraph_peerweight(metagraph, nucleus, device):
     r"""
@@ -148,6 +149,39 @@ def joining_logits(return_ops, topk_weights, logits):
             output += logits[joining_uids[index]] * joining_weight
     
     return output, joining_uids
+
+def joining_loss(return_ops, topk_weights, losses):
+    """
+    Joins response embbedings depending on the return codes 
+        Args:
+            return_ops  (:type:`pytorch.LongTensor`, `required`), shape = [n]:
+                The return codes of dendrite call return ops.
+            topk_weights  (:type:`pytorch.FloatTensor`, `required`), shape = [n]:
+                The topk weights selected for joining
+            responses  (:type:`pytorch.FloatTensor`, `required`), shape = [n]:
+                The embeddings that sent by the peers
+
+        Returns:
+            output (:type:`pytorch.FloatTensor``, `required), shape = [n]:
+                The joinned output embedding using the weights
+            joining_uids  (:type:`pytorch.LongTensor`, `required`), shape = [n]:
+                The uids used to create output
+    
+    """
+    joining_uids = torch.where( return_ops == bittensor.proto.ReturnCode.Success )[0]
+    weights =  topk_weights[(return_ops == bittensor.proto.ReturnCode.Success)]
+    weights -= weights.min(1, keepdim=True)[0]
+    weights /= weights.max(1, keepdim=True)[0]
+    
+    loss = None
+    for index, joining_weight in enumerate( weights ):
+        if loss == None:
+            loss = math.exp(losses[joining_uids[index]]) * joining_weight
+        else:
+            loss += math.exp(losses[joining_uids[index]]) * joining_weight
+    
+    loss = -math.log(loss)
+    return loss, joining_uids
 
 def partial_contexts(return_ops, topk_uids, topk_weights, responses):
     """

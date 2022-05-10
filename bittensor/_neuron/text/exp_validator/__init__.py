@@ -37,7 +37,7 @@ from rich import print
 from rich.console import Console
 from rich.traceback import install
 
-from ..neuron_utilities import joining_context, joining_logits, partial_contexts, ThreadQueue
+from ..neuron_utilities import joining_context, joining_logits, joining_loss,partial_contexts, ThreadQueue
 import torch.nn as nn
 import random
 from torch.nn.utils import clip_grad_norm_
@@ -774,9 +774,11 @@ class nucleus( torch.nn.Module ):
                     df.to_csv(self.result_path + 'decoder_gate_score.csv')
                 else:
                     df.to_csv(self.result_path + 'decoder_gate_score.csv', mode = 'a', header = False)
-            joint_logits, uids = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
-            target_loss = self.get_target_loss_from_logit(joint_logits, inputs) 
+            # joint_logits, uids = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
+            target_loss, uids = joining_loss(return_ops, batchwise_routing_weights[routing_index], losses)
+            # target_loss = self.get_target_loss_from_logit(joint_logits, inputs) 
             
+        
         print (f'Time\t|\t{time.time() - start_time}'); start_time = time.time()
         print ('Loss\t|\t{}'.format( target_loss.item() ))
         print ('Penalty\t|\t{}'.format( (self.penalty/self.config.nucleus.penalty_start) * self.config.nucleus.penalty_decay_factor**( self.global_step % self.penalty_reset_time) ))
