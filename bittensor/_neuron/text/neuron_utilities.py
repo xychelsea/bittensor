@@ -173,6 +173,7 @@ def joining_loss(return_ops, topk_weights, losses):
     weights /= weights.max()
     
     loss = None
+    print(topk_weights)
     print(weights)
     print(return_ops)
     print(losses)
