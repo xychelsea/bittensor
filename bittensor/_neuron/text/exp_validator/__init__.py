@@ -549,6 +549,7 @@ class nucleus( torch.nn.Module ):
         parser.add_argument('--nucleus.use_topk', action='store_true', help='', default=False )
         parser.add_argument('--nucleus.num_workers', type=int, help='', default=4 )
         parser.add_argument('--nucleus.penalty_decay_factor', type=float, help='', default=0.99 )
+        parser.add_argument('--nucleus.penalty_start', type=float, help='', default=10.0 )
 
     @classmethod
     def config ( cls ):
@@ -778,7 +779,7 @@ class nucleus( torch.nn.Module ):
             
         print (f'Time\t|\t{time.time() - start_time}'); start_time = time.time()
         print ('Loss\t|\t{}'.format( target_loss.item() ))
-        print ('Penalty\t|\t{}'.format( (self.penalty/10) * self.config.nucleus.penalty_decay_factor**( self.global_step % self.penalty_reset_time) ))
+        print ('Penalty\t|\t{}'.format( (self.penalty/self.config.nucleus.penalty_start) * self.config.nucleus.penalty_decay_factor**( self.global_step % self.penalty_reset_time) ))
 
         # === Compute Importance loss ===
         # Computes the importance loss based on the stardard error of batchwise_routing_weights
