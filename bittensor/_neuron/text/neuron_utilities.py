@@ -177,10 +177,7 @@ def joining_loss(return_ops, topk_weights, losses):
         else:
             loss += torch.exp(losses[joining_uids[index]]) * joining_weight
     
-    print(loss)
-    print(loss)
-    print(loss)
-    loss = -torch.log(loss)
+    loss = torch.log(loss)
     return loss, joining_uids
 
 def partial_contexts(return_ops, topk_uids, topk_weights, responses):
