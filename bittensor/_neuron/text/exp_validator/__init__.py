@@ -346,7 +346,7 @@ class neuron:
 
             weight_data = dict(('routing_weight/' + uid, p.item()) for uid, p in zip(interested_uids, self.nucleus.gates.detach()))
             loss_data = dict(('loss/' + uid, p.item()) for uid, p in zip(routing_uids, losses) if p)
-            sum_loss_data = {'total_loss': loss.detach().item(), 'penalty': forward_results.penalty}
+            sum_loss_data = {'total_loss': loss.detach().item(), 'penalty': forward_results.penalty.detach().item()}
             print(self.global_step, {**weight_data, **loss_data, **sum_loss_data})
             wandb.log( {**weight_data, **loss_data, **sum_loss_data}, step = self.global_step )
 
