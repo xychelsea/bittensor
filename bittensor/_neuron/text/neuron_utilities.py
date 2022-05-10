@@ -173,13 +173,15 @@ def joining_loss(return_ops, topk_weights, losses):
     weights /= weights.max()
     
     loss = None
+    print(weights)
+    print(return_ops)
+    print(losses)
     for index, joining_weight in enumerate( weights ):
         if loss == None:
             loss = torch.exp(losses[joining_uids[index]]) * joining_weight
         else:
             loss += torch.exp(losses[joining_uids[index]]) * joining_weight
     
-    print(loss)
     print(loss)
     print(loss)
     print(loss)
