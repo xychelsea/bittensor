@@ -179,6 +179,10 @@ def joining_loss(return_ops, topk_weights, losses):
         else:
             loss += torch.exp(losses[joining_uids[index]]) * joining_weight
     
+    print(loss)
+    print(loss)
+    print(loss)
+    print(loss)
     loss = -torch.log(loss)
     return loss, joining_uids
 
