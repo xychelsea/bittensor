@@ -170,8 +170,8 @@ def joining_loss(return_ops, topk_weights, losses):
     """
     joining_uids = torch.where( return_ops == bittensor.proto.ReturnCode.Success )[0]
     weights =  topk_weights[(return_ops == bittensor.proto.ReturnCode.Success)]
-    weights -= weights.min()[0]
-    weights /= weights.max()[0]
+    weights -= weights.min()
+    weights /= weights.max()
     
     loss = None
     for index, joining_weight in enumerate( weights ):
