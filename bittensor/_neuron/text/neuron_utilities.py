@@ -9,7 +9,6 @@ from concurrent.futures import Future
 import queue
 from threading import Thread
 from concurrent.futures import ThreadPoolExecutor
-import math
 
 def update_metagraph_peerweight(metagraph, nucleus, device):
     r"""
@@ -176,9 +175,9 @@ def joining_loss(return_ops, topk_weights, losses):
     loss = None
     for index, joining_weight in enumerate( weights ):
         if loss == None:
-            loss = math.exp(losses[joining_uids[index]]) * joining_weight
+            loss = torch.exp(losses[joining_uids[index]]) * joining_weight
         else:
-            loss += math.exp(losses[joining_uids[index]]) * joining_weight
+            loss += torch.exp(losses[joining_uids[index]]) * joining_weight
     
     loss = -math.log(loss)
     return loss, joining_uids
