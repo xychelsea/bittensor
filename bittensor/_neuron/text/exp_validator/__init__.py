@@ -505,7 +505,7 @@ class nucleus( torch.nn.Module ):
 
 
         # self.gates = torch.nn.Linear( bittensor.__network_dim__, 13 + self.num_random, bias=True ).to( self.device )
-        self.gates = torch.nn.parameter.Parameter(torch.ones(13+self.num_others) / (13 + self.num_others))
+        self.gates = torch.nn.parameter.Parameter(torch.ones(13+self.num_others) )
         self.gate_relu = nn.ReLU()
         self.global_step = 0
         self.penalty_reset_time = math.log(0.2)/ math.log(self.config.nucleus.penalty_decay_factor)
@@ -567,7 +567,7 @@ class nucleus( torch.nn.Module ):
         # === Resets all the weights using xavier initialization. ===
         torch.nn.init.xavier_uniform_ ( self.token_embedding.weight )
         torch.nn.init.xavier_uniform_ ( self.decoder.weight )
-        torch.nn.init.constant_ ( self.gates, 1/(13 + self.num_others) )
+        torch.nn.init.constant_ ( self.gates, 1 )
         def init_xavier( component ):
             try:
                 torch.nn.init.xavier_uniform_( component.weight )
