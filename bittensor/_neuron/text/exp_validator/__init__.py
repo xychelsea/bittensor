@@ -589,7 +589,7 @@ class nucleus( torch.nn.Module ):
         # self.penalty += self.decoder_gate_penalty(decoder_gate_score, torch.zeros_like(decoder_gate_score))
         k = max(40 - round(self.global_step/2), 5)
         
-        idx = torch.tensor(decoder_gate_score).topk(k, largest = False)[1]
+        idx = decoder_gate_score.topk(k, largest = False)[1]
         decoder_gate_score[idx] = -10
         decoder_gate_score = nn.functional.softmax(decoder_gate_score , dim = 0)
         sub_hiddens = [score * sub_decoder(hidden) for score, sub_decoder in zip(decoder_gate_score.tolist(), self.sub_decoder) if score > 0.001]
