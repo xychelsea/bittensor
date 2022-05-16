@@ -520,7 +520,8 @@ class nucleus( torch.nn.Module ):
             1708:	'EleutherAI/gpt-neo-1.3B_2'
         }
 
-        self.test_serves_name = { k:v for (k,v) in test_servers_name.items() if k in self.config.nucleus.server}
+        servers_uid = [int(uid) for uid in self.config.nucleus.servers]
+        self.test_serves_name = { k:v for (k,v) in test_servers_name.items() if k in servers_uid}
 
         # self.gates = torch.nn.Linear( bittensor.__network_dim__, 13 + self.num_random, bias=True ).to( self.device )
         self.gates = torch.nn.parameter.Parameter(torch.ones(len(self.test_servers_name.items())+self.num_others) )
