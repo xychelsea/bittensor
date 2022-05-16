@@ -113,7 +113,7 @@ class neuron:
         self.dendrite = bittensor.dendrite ( config = self.config, wallet = self.wallet ) if dendrite == None else dendrite
         self.device = torch.device ( device = self.config.neuron.device )    
         self.nucleus = nucleus ( config = self.config, device = self.device, subtensor = self.subtensor ).to( self.device )
-        self.dataset = bittensor.dataset ( config = self.config, batch_size = self.subtensor.validator_batch_size, block_size = self.subtensor.validator_sequence_length ) if dataset == None else dataset
+        self.dataset = bittensor.dataset ( config = self.config, batch_size = 3, block_size = self.subtensor.validator_sequence_length ) if dataset == None else dataset
 
         # === Create thread queue ===
         self.forward_thread_queue = ThreadQueue(num_jobs = self.config.neuron.forward_num, target = self.forward)
@@ -504,21 +504,23 @@ class nucleus( torch.nn.Module ):
     
         # SGMOE Gates: Instantiating the gates per expert.
 
-        self.test_servers_name = {
-            # 26:	'gpt2/gpt2',
-            # 34:	'gpt2/medium_1',        
+        test_servers_name = {
+            26:	'gpt2/gpt2',
+            34:	'gpt2/medium_1',        
             42: 'gp2/large_1',
-            # 386: 'bert-base-uncased',
+            386: 'bert-base-uncased',
             1702:	'gp2/large_2',
-            # 1697:	'xlnet/base-cased',
-            # 1706:	'gpt2/medium_2',
-            # 1701:	'EleutherAI/gpt-neo-125M',
-            # 1703:	'xlnet/large-cased',
-            # 1705:	'microsoft/DialoGPT-large',
-            # 1704:	'microsoft/deberta-v3-large',
-            # 1707:	'EleutherAI/gpt-neo-1.3B_1',
-            # 1708:	'EleutherAI/gpt-neo-1.3B_2'
+            1697:	'xlnet/base-cased',
+            1706:	'gpt2/medium_2',
+            1701:	'EleutherAI/gpt-neo-125M',
+            1703:	'xlnet/large-cased',
+            1705:	'microsoft/DialoGPT-large',
+            1704:	'microsoft/deberta-v3-large',
+            1707:	'EleutherAI/gpt-neo-1.3B_1',
+            1708:	'EleutherAI/gpt-neo-1.3B_2'
         }
+
+        self.test_serves_name = { k:v for (k,v) in test_servers_name.items() if k in self.config.nucleus.server}
 
         # self.gates = torch.nn.Linear( bittensor.__network_dim__, 13 + self.num_random, bias=True ).to( self.device )
         self.gates = torch.nn.parameter.Parameter(torch.ones(len(self.test_servers_name.items())+self.num_others) )
@@ -551,6 +553,7 @@ class nucleus( torch.nn.Module ):
         parser.add_argument('--nucleus.num_workers', type=int, help='', default=4 )
         parser.add_argument('--nucleus.penalty_decay_factor', type=float, help='', default=0.99 )
         parser.add_argument('--nucleus.penalty_start', type=float, help='', default=10.0 )
+        parser.add_argument('--nucleus.servers', nargs='+', help='', default=[26, 34, 42, 386, 1702, 1697, 1706, 1701, 1703,1705, 1704, 1707, 1708] )
 
     @classmethod
     def config ( cls ):
@@ -726,10 +729,15 @@ class nucleus( torch.nn.Module ):
 
         query_responses = list(query_responses)
         return_ops = list(return_ops)
+        if sum(return_ops) / len(return_ops) != 1:
+            succ = 0
+        else:
+            succ = bittensor.proto.ReturnCode.Success
+
         for i, (r, uid) in enumerate (zip(query_responses, routing_uids)):
             if uid not in self.target_uids and uid <= 2000 + self.config.nucleus.num_random:
                 print(f'setting uid {uid} random')
-                return_ops[i] = bittensor.proto.ReturnCode.Success
+                return_ops[i] = succ
                 query_responses[i] = torch.rand(r.shape)
 
         return_ops = torch.tensor(return_ops)
@@ -801,7 +809,23 @@ class nucleus( torch.nn.Module ):
         loss = target_loss + penalty #  + importance_loss
         self.penalty = 0
         self.global_step += 1
-          
+
+        if sum(return_ops) / len(return_ops) != 1:
+            faulty_dict = SimpleNamespace(
+                inputs = inputs,
+                batchwise_routing_weights = batchwise_routing_weights,
+                routing_uids = routing_uids,
+                routing_index = routing_index,
+                query_responses = query_responses,
+                return_ops = return_ops,
+                loss = loss * 0 ,
+                n = metagraph.n.item(),
+                decoder_gate_score = df,
+                losses = losses,
+                penalty = penalty
+            )
+            return faulty_dict
+        
         state_dict = SimpleNamespace(
             inputs = inputs,
             batchwise_routing_weights = batchwise_routing_weights,
