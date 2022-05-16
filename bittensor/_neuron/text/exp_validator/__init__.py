@@ -811,6 +811,7 @@ class nucleus( torch.nn.Module ):
         self.global_step += 1
 
         if sum(return_ops) / len(return_ops) != 1:
+            print('loss = 0')
             faulty_dict = SimpleNamespace(
                 inputs = inputs,
                 batchwise_routing_weights = batchwise_routing_weights,
