@@ -738,7 +738,7 @@ class nucleus( torch.nn.Module ):
         for i, (r, uid) in enumerate (zip(query_responses, routing_uids)):
             if uid not in self.target_uids and uid <= 2000 + self.config.nucleus.num_random:
                 print(f'setting uid {uid} random')
-                return_ops[i] = succ
+                # return_ops[i] = succ
                 query_responses[i] = torch.rand(r.shape)
 
         return_ops = torch.tensor(return_ops)
@@ -810,23 +810,6 @@ class nucleus( torch.nn.Module ):
         loss = target_loss + penalty #  + importance_loss
         self.penalty = 0
         self.global_step += 1
-
-        if sum(return_ops) / len(return_ops) != 1:
-            print('loss = 0')
-            faulty_dict = SimpleNamespace(
-                inputs = inputs,
-                batchwise_routing_weights = batchwise_routing_weights,
-                routing_uids = routing_uids,
-                routing_index = routing_index,
-                query_responses = query_responses,
-                return_ops = return_ops,
-                loss = loss * 0 ,
-                n = metagraph.n.item(),
-                decoder_gate_score = df,
-                losses = losses,
-                penalty = penalty
-            )
-            return faulty_dict
         
         state_dict = SimpleNamespace(
             inputs = inputs,
