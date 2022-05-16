@@ -504,35 +504,35 @@ class nucleus( torch.nn.Module ):
     
         # SGMOE Gates: Instantiating the gates per expert.
 
+        self.test_servers_name = {
+            # 26:	'gpt2/gpt2',
+            # 34:	'gpt2/medium_1',        
+            42: 'gp2/large_1',
+            # 386: 'bert-base-uncased',
+            1702:	'gp2/large_2',
+            # 1697:	'xlnet/base-cased',
+            # 1706:	'gpt2/medium_2',
+            # 1701:	'EleutherAI/gpt-neo-125M',
+            # 1703:	'xlnet/large-cased',
+            # 1705:	'microsoft/DialoGPT-large',
+            # 1704:	'microsoft/deberta-v3-large',
+            # 1707:	'EleutherAI/gpt-neo-1.3B_1',
+            # 1708:	'EleutherAI/gpt-neo-1.3B_2'
+        }
 
         # self.gates = torch.nn.Linear( bittensor.__network_dim__, 13 + self.num_random, bias=True ).to( self.device )
-        self.gates = torch.nn.parameter.Parameter(torch.ones(13+self.num_others) )
+        self.gates = torch.nn.parameter.Parameter(torch.ones(len(self.test_servers_name.items())+self.num_others) )
         self.gate_relu = nn.ReLU()
         self.global_step = 0
         self.penalty_reset_time = math.log(0.2)/ math.log(self.config.nucleus.penalty_decay_factor)
         self.reset_weights()
         
-        self.target_uids = torch.tensor([26,34,42,386,1697,1701,1702,1703,1704,1705,1706,1707,1708])
+        self.target_uids = torch.tensor(list(self.test_servers_name.keys()))
         self.random_uids = torch.tensor(list(range(2000, 2000 + self.num_others)))
         if self.config.nucleus.num_others > 0:
             self.interested_uids = torch.concat([self.target_uids, self.random_uids])
         else:
             self.interested_uids = self.target_uids
-        self.test_servers_name = {
-            26:	'gpt2/gpt2',
-            34:	'gpt2/medium_1',        
-            42: 'gp2/large_1',
-            386: 'bert-base-uncased',
-            1702:	'gp2/large_2',
-            1697:	'xlnet/base-cased',
-            1706:	'gpt2/medium_2',
-            1701:	'EleutherAI/gpt-neo-125M',
-            1703:	'xlnet/large-cased',
-            1705:	'microsoft/DialoGPT-large',
-            1704:	'microsoft/deberta-v3-large',
-            1707:	'EleutherAI/gpt-neo-1.3B_1',
-            1708:	'EleutherAI/gpt-neo-1.3B_2'
-        }
 
     @classmethod
     def add_args( cls, parser ):
@@ -588,7 +588,7 @@ class nucleus( torch.nn.Module ):
         decoder_gate_score = torch.mean(torch.mean(self.decoder_gate(hidden), axis = 0), axis = 0)
         # self.penalty += self.decoder_gate_penalty(decoder_gate_score, torch.zeros_like(decoder_gate_score))
         k = max(40 - round(self.global_step/2), 5)
-        
+        k = min (k, self.num_sub_decoder)
         idx = decoder_gate_score.topk(k, largest = False)[1]
         decoder_gate_score[idx] = -10
         decoder_gate_score = nn.functional.softmax(decoder_gate_score , dim = 0)
@@ -727,7 +727,8 @@ class nucleus( torch.nn.Module ):
         query_responses = list(query_responses)
         return_ops = list(return_ops)
         for i, (r, uid) in enumerate (zip(query_responses, routing_uids)):
-            if uid not in self.target_uids and uid < 2000 + self.config.nucleus.num_random:
+            if uid not in self.target_uids and uid <= 2000 + self.config.nucleus.num_random:
+                print(f'setting uid {uid} random')
                 return_ops[i] = bittensor.proto.ReturnCode.Success
                 query_responses[i] = torch.rand(r.shape)
 
