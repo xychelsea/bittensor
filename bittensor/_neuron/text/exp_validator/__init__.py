@@ -310,6 +310,7 @@ class neuron:
         start_block = self.subtensor.block
         while self.subtensor.block < start_block + blocks_per_epoch:
             start_time = time.time()
+            torch.cuda.empty_cache()
 
             # === Forward ===
             # Forwards inputs through the network and returns the loss
