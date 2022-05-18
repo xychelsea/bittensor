@@ -214,7 +214,7 @@ class neuron:
         r""" Run the nucleus forward request
         This function is supposed to be ran multi-threaded.
         """
-        result = self.nucleus( next(self.dataset) , self.metagraph, self.dendrite )
+        result = self.nucleus( next(self.dataset).to(self.device) , self.metagraph, self.dendrite )
                 
         # === Backward ===
         # Backwards gradients through model to train gating and remote endpoints.
