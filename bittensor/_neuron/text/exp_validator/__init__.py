@@ -737,11 +737,11 @@ class nucleus( torch.nn.Module ):
         else:
             succ = bittensor.proto.ReturnCode.Success
 
-        for i, (r, uid) in enumerate (zip(query_responses, routing_uids)):
-            if uid not in self.target_uids and uid <= 2000 + self.config.nucleus.num_random:
-                print(f'setting uid {uid} random')
-                # return_ops[i] = succ
-                query_responses[i] = torch.rand(r.shape)
+        # for i, (r, uid) in enumerate (zip(query_responses, routing_uids)):
+        #     if uid not in self.target_uids and uid <= 2000 + self.config.nucleus.num_random:
+        #         print(f'setting uid {uid} random')
+        #         # return_ops[i] = succ
+        #         query_responses[i] = torch.rand(r.shape)
 
         return_ops = torch.tensor(return_ops)
         
