@@ -460,16 +460,13 @@ To run a local node (See: docs/running_a_validator.md) \n
         """
 
         with bittensor.__console__.status(":satellite: Checking Account..."):
-            neuron = None
-            if not neuron.is_null:
-                bittensor.__console__.print(":white_heavy_check_mark: [green]Already Registered[/green]:\n  uid: [bold white]{}[/bold white]\n  hotkey: [bold white]{}[/bold white]\n  coldkey: [bold white]{}[/bold white]".format(neuron.uid, neuron.hotkey, neuron.coldkey))
-                return True
+            neuron = []
 
         if prompt:
             if not Confirm.ask("Continue Registration?\n  hotkey:     [bold white]{}[/bold white]\n  coldkey:    [bold white]{}[/bold white]\n  network:    [bold white]{}[/bold white]".format( wallet.hotkey.ss58_address, wallet.coldkeypub.ss58_address, self.network ) ):
                 return False
 
-        # Attempt rolling registration.
+        # Attempt ro[]g registration.
         attempts = 1
         while True:
             # Solve latest POW.
