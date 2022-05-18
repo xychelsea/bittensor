@@ -279,6 +279,7 @@ def solve_for_difficulty_fast_cuda( subtensor: 'bittensor.Subtensor', wallet: 'b
                         update_interval,
                         TPB,
                         block_bytes, 
+                        block_number,
                         difficulty, 
                         limit,
                         dev_id)
