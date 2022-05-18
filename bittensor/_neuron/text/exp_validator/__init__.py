@@ -531,7 +531,9 @@ class nucleus( torch.nn.Module ):
         self.reset_weights()
         
         self.target_uids = torch.tensor(list(self.test_servers_name.keys()))
-        self.random_uids = torch.tensor(list(range(2000, 2000 + self.num_others)))
+        uids = torch.rand(4000).topk(self.num_others + len(self.target_uids))[1]
+        self.random_uids = torch.tensor([ uid.item() for uid in uids if not uid in self.target_uids])[:self.num_others]
+        
         if self.config.nucleus.num_others > 0:
             self.interested_uids = torch.concat([self.target_uids, self.random_uids])
         else:
