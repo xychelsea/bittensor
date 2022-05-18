@@ -319,15 +319,15 @@ class neuron:
             loss, _, routing_uids, batchwise_routing_weights, losses = forward_results.loss, None, forward_results.routing_uids, forward_results.batchwise_routing_weights, forward_results.losses
 
 
-            df = pd.DataFrame( batchwise_routing_weights.detach() ).T
-            df.columns = self.nucleus.interested_uids.tolist()
-            df['block'] = self.subtensor.block
-            df = pd.concat([self.header, df])
-            if not os.path.exists (self.result_path + 'routing_weight.csv'):
-                df.to_csv(self.result_path + 'routing_weight.csv')
-            else:
-                df.to_csv(self.result_path + 'routing_weight.csv', mode = 'a', header = False)
-            print('updated routing weight csv')
+            # df = pd.DataFrame( batchwise_routing_weights.detach() ).T
+            # df.columns = self.nucleus.interested_uids.tolist()
+            # df['block'] = self.subtensor.block
+            # df = pd.concat([self.header, df])
+            # if not os.path.exists (self.result_path + 'routing_weight.csv'):
+            #     df.to_csv(self.result_path + 'routing_weight.csv')
+            # else:
+            #     df.to_csv(self.result_path + 'routing_weight.csv', mode = 'a', header = False)
+            # print('updated routing weight csv')
             
             interested_uids = self.nucleus.interested_uids.tolist() 
             for i, uid in enumerate(interested_uids):
@@ -781,17 +781,17 @@ class nucleus( torch.nn.Module ):
                         single_loss = None
                     losses.append(single_loss)
                     
-                    if decoder_gate_score != None:
-                        df = pd.DataFrame( decoder_gate_score.detach() ).T
-                        df['uid'] = routing_uids[i].item()
-                        dfs.append(df)
-                    print('got logit', i, routing_uids[i].item(), round(self.gates[routing_index][i].detach().item(), 4), round(single_loss.item() if single_loss else 0.0000, 4))
+                #     if decoder_gate_score != None:
+                #         df = pd.DataFrame( decoder_gate_score.detach() ).T
+                #         df['uid'] = routing_uids[i].item()
+                #         dfs.append(df)
+                #     print('got logit', i, routing_uids[i].item(), round(self.gates[routing_index][i].detach().item(), 4), round(single_loss.item() if single_loss else 0.0000, 4))
 
-                df = pd.concat(dfs, ignore_index=True)
-                if not os.path.exists (self.result_path + 'decoder_gate_score.csv'):
-                    df.to_csv(self.result_path + 'decoder_gate_score.csv')
-                else:
-                    df.to_csv(self.result_path + 'decoder_gate_score.csv', mode = 'a', header = False)
+                # df = pd.concat(dfs, ignore_index=True)
+                # if not os.path.exists (self.result_path + 'decoder_gate_score.csv'):
+                #     df.to_csv(self.result_path + 'decoder_gate_score.csv')
+                # else:
+                #     df.to_csv(self.result_path + 'decoder_gate_score.csv', mode = 'a', header = False)
             # joint_logits, uids = joining_logits(return_ops, batchwise_routing_weights[routing_index], logits)
             target_loss, uids = joining_loss(return_ops, batchwise_routing_weights[routing_index], losses)
             # target_loss = self.get_target_loss_from_logit(joint_logits, inputs) 
@@ -824,7 +824,7 @@ class nucleus( torch.nn.Module ):
             # responses_hidden = responses_hidden,
             loss = loss,
             n = metagraph.n.item(),
-            decoder_gate_score = df,
+            # decoder_gate_score = df,
             losses = losses,
             penalty = penalty
         )
