@@ -459,10 +459,10 @@ class GenesisTextDataset( Dataset ):
                 Contents of the text data.
         """
         self.IPFS_fails = 0
+        data_corpus = []
         try:
             # --- Get directories from a random dataset_hash
             directories = list(self.get_hashes_from_dataset())
-            data_corpus = []
 
             # --- Generate a random order of the directories
             random.shuffle(directories)
@@ -478,7 +478,7 @@ class GenesisTextDataset( Dataset ):
                     # --- Get a directory that leads to a datafile.
                     random_datafile_dir = self.get_root_text_hash(directory)
                     if random_datafile_dir == None:
-                        pass
+                        continue
 
                     # --- Get text from the datafile directory
                     text = self.get_text(random_datafile_dir)
