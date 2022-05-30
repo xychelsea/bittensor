@@ -32,6 +32,9 @@ from threading import Lock
 from loguru import logger; logger = logger.opt(colors=True)
 from datetime import datetime,timedelta
 
+import cProfile, pstats, io
+from pstats import SortKey
+
 def serve( 
         config, 
         model,
@@ -185,6 +188,18 @@ def serve(
     # --- Run Forever.
     while True:
         
+        pr = cProfile.Profile()
+        pr.enable()
+
+        forward_text(torch.rand(10, 64).to(torch.long))
+
+        pr.disable()
+        s = io.StringIO()
+        sortby = SortKey.CUMULATIVE
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats(.1)
+        print(s.getvalue())
+
         current_block = subtensor.get_current_block()
         end_block = current_block + config.neuron.blocks_per_epoch
         while end_block >= current_block:
